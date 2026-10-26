@@ -249,7 +249,7 @@ pub fn run() {
             log::info!("File Beaver {} started", app.package_info().version);
             updates::start_background_checks(handle.clone());
             if crashed_last_time {
-                log::warn!("previous session did not exit cleanly");
+                log::warn!("previous session crashed (a crash report was written)");
                 let h = handle.clone();
                 std::thread::spawn(move || {
                     // Let the card window finish loading before talking to it.

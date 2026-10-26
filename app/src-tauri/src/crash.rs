@@ -34,10 +34,14 @@ fn stamp() -> String {
 static DUMP_PATH: OnceLock<Vec<u16>> = OnceLock::new();
 
 /// Installs the panic hook and native crash handler and records that a session is running.
-/// Returns true if the previous session didn't exit cleanly.
+/// Returns true if the previous session crashed: it didn't exit cleanly AND left a crash
+/// report. Being ended without a report (Windows shutting down, an installer or Task
+/// Manager closing it) isn't a crash, so it doesn't count.
 pub fn install() -> bool {
     let _ = std::fs::create_dir_all(dir());
-    let crashed_before = marker().exists();
+    let started = std::fs::metadata(marker()).and_then(|m| m.modified()).ok();
+    let report = latest_report().and_then(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok());
+    let crashed_before = matches!((started, report), (Some(s), Some(r)) if r >= s);
     let _ = std::fs::write(marker(), std::process::id().to_string());
 
     let dump: Vec<u16> = dir().join(format!("native-{}.dmp", stamp())).as_os_str().encode_wide_null();

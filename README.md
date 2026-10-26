@@ -38,19 +38,43 @@
 Drop an image or a PDF on the beaver and a ring of actions opens around him. Every result
 is saved as a new file next to the original, so the original is never changed.
 
-| | |
-|:---:|---|
-| <img src="branding/github/icons/convert.svg" width="36" height="36" alt=""> | **Convert**: change the format. PDF to JPG (one image per page), PNG to JPG, photos to PDF, and more. |
-| <img src="branding/github/icons/compress.svg" width="36" height="36" alt=""> | **Compress**: make photos and PDFs smaller for email or upload, and see the size before and after. |
-| <img src="branding/github/icons/crop.svg" width="36" height="36" alt=""> | **Crop**: cut an image down freely or to a ratio (1:1, 4:3, 16:9, 9:16 and more). |
-| <img src="branding/github/icons/add-bg.svg" width="36" height="36" alt=""> | **Add background**: put a screenshot on a colour or gradient, with padding, rounded corners and a shadow. |
-| <img src="branding/github/icons/annotate.svg" width="36" height="36" alt=""> | **Annotate**: add text, arrows, boxes, circles, highlights and numbered steps. |
-| <img src="branding/github/icons/redact.svg" width="36" height="36" alt=""> | **Redact**: black out or pixelate names, emails and addresses. In PDFs the text underneath is removed, not just covered. |
-| <img src="branding/github/icons/edit.svg" width="36" height="36" alt=""> | **Edit**: rotate, flip, resize, and adjust brightness, contrast and saturation. |
-| <img src="branding/github/icons/metadata.svg" width="36" height="36" alt=""> | **Metadata**: remove hidden details such as the phone or camera model and the GPS location a photo was taken at. |
+<table>
+  <tr>
+    <td align="center" width="56"><img src="branding/github/icons/convert.svg" width="36" height="36" alt=""></td>
+    <td><b>Convert</b><br>change the format. PDF to JPG (one image per page), PNG to JPG, photos to PDF, and more.</td>
+  </tr>
+  <tr>
+    <td align="center" width="56"><img src="branding/github/icons/compress.svg" width="36" height="36" alt=""></td>
+    <td><b>Compress</b><br>make photos and PDFs smaller for email or upload, and see the size before and after.</td>
+  </tr>
+  <tr>
+    <td align="center" width="56"><img src="branding/github/icons/crop.svg" width="36" height="36" alt=""></td>
+    <td><b>Crop</b><br>cut an image down freely or to a ratio (1:1, 4:3, 16:9, 9:16 and more).</td>
+  </tr>
+  <tr>
+    <td align="center" width="56"><img src="branding/github/icons/add-bg.svg" width="36" height="36" alt=""></td>
+    <td><b>Add background</b><br>put a screenshot on a colour or gradient, with padding, rounded corners and a shadow.</td>
+  </tr>
+  <tr>
+    <td align="center" width="56"><img src="branding/github/icons/annotate.svg" width="36" height="36" alt=""></td>
+    <td><b>Annotate</b><br>add text, arrows, boxes, circles, highlights and numbered steps.</td>
+  </tr>
+  <tr>
+    <td align="center" width="56"><img src="branding/github/icons/redact.svg" width="36" height="36" alt=""></td>
+    <td><b>Redact</b><br>black out or pixelate names, emails and addresses. In PDFs the text underneath is removed, not just covered.</td>
+  </tr>
+  <tr>
+    <td align="center" width="56"><img src="branding/github/icons/edit.svg" width="36" height="36" alt=""></td>
+    <td><b>Edit</b><br>rotate, flip, resize, and adjust brightness, contrast and saturation.</td>
+  </tr>
+  <tr>
+    <td align="center" width="56"><img src="branding/github/icons/metadata.svg" width="36" height="36" alt=""></td>
+    <td><b>Metadata</b><br>remove hidden details such as the phone or camera model and the GPS location a photo was taken at.</td>
+  </tr>
+</table>
 
-**Opens** JPG, PNG, WEBP, HEIC, TIFF, AVIF, BMP, GIF and PDF.
-**Saves** JPG, PNG, WEBP, HEIC, TIFF, AVIF, BMP, PDF and DOCX.
+**Opens:** JPG, PNG, WEBP, HEIC, TIFF, AVIF, BMP, GIF and PDF.<br>
+**Saves:** JPG, PNG, WEBP, HEIC, TIFF, AVIF, BMP, PDF and DOCX.
 
 ## Install
 
@@ -96,16 +120,40 @@ action.
 
 Yes, and every point below can be checked in this repository.
 
-| | |
-|---|---|
-| **Your files stay on your PC** | All the work happens on your computer. No server, no upload, no cloud. |
-| **No account, no tracking** | File Beaver collects nothing about you or how you use it. |
-| **One connection, for updates** | Once a day it checks this repository for a new version. Updates are signed, and File Beaver refuses any update that wasn't signed with the developer's key. |
-| **Originals are never touched** | Results are always written as new files. |
-| **No admin rights** | It installs for your Windows account only and can't change system settings. |
-| **Crash reports stay local** | If it ever crashes, a report is saved on your PC and nothing is sent. |
-| **Clean uninstall** | Remove it from **Settings › Apps › Installed apps**; it also takes itself out of startup. |
-| **Open source** | The full source is here under the MIT licence. See [SECURITY.md](SECURITY.md) for details and how to report a problem. |
+<table>
+  <tr>
+    <td width="220"><b>Your files stay on your PC</b></td>
+    <td>All the work happens on your computer. No server, no upload, no cloud.</td>
+  </tr>
+  <tr>
+    <td width="220"><b>No account, no tracking</b></td>
+    <td>File Beaver collects nothing about you or how you use it.</td>
+  </tr>
+  <tr>
+    <td width="220"><b>One connection, for updates</b></td>
+    <td>Once a day it checks this repository for a new version. Updates are signed, and File Beaver refuses any update that wasn't signed with the developer's key.</td>
+  </tr>
+  <tr>
+    <td width="220"><b>Originals are never touched</b></td>
+    <td>Results are always written as new files.</td>
+  </tr>
+  <tr>
+    <td width="220"><b>No admin rights</b></td>
+    <td>It installs for your Windows account only and can't change system settings.</td>
+  </tr>
+  <tr>
+    <td width="220"><b>Crash reports stay local</b></td>
+    <td>If it ever crashes, a report is saved on your PC and nothing is sent.</td>
+  </tr>
+  <tr>
+    <td width="220"><b>Clean uninstall</b></td>
+    <td>Remove it from <b>Settings › Apps › Installed apps</b>; it also takes itself out of startup.</td>
+  </tr>
+  <tr>
+    <td width="220"><b>Open source</b></td>
+    <td>The full source is here under the MIT licence. See <a href="SECURITY.md">SECURITY.md</a> for details and how to report a problem.</td>
+  </tr>
+</table>
 
 ## Use it with an AI assistant
 

@@ -201,6 +201,19 @@ fn place_toast(app: &AppHandle, (x, y): (i32, i32)) {
         }
         px = px.clamp(l, (r - w).max(l));
         py = py.clamp(t, (b - h).max(t));
+        // Never sit on the beaver (it lives in the same corner by default): go above it,
+        // or beside it when there's no room above.
+        if let Some((bl, bt, br, bb)) = crate::beaver::visible_rect() {
+            if px < br && px + w > bl && py < bb && py + h > bt {
+                if bt - off - h >= t {
+                    py = bt - off - h;
+                } else if bl - off - w >= l {
+                    px = bl - off - w;
+                } else {
+                    px = (br + off).min((r - w).max(l));
+                }
+            }
+        }
     }
     log::info!("card at ({px}, {py}) size {w}x{h}");
     let _ = win.set_position(PhysicalPosition::new(px, py));

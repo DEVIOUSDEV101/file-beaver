@@ -191,3 +191,26 @@ html.ring-root #root {
   background: var(--lime);
   font-weight: 700;
 }
+
+/* The floating beaver, drawn where it sits under the ring: let go on him to pick by click. */
+.beaver-spot circle {
+  fill: rgba(14, 59, 36, 0.94);
+  stroke: #a6e43a;
+  stroke-width: 2.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: beaver-spot 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes beaver-spot {
+  to {
+    stroke-width: 4;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beaver-spot circle {
+    animation: none;
+  }
+}

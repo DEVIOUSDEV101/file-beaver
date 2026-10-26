@@ -34,6 +34,10 @@ pub struct Settings {
     pub output: OutputLocation,
     pub output_folder: String,
     pub launch_at_startup: bool,
+    /// The floating beaver you can drop files onto.
+    pub show_beaver: bool,
+    /// Where the beaver was left (physical px, top-left); None = bottom-right corner.
+    pub beaver_pos: Option<(i32, i32)>,
 }
 
 impl Default for Settings {
@@ -44,6 +48,8 @@ impl Default for Settings {
             output: OutputLocation::Beside,
             output_folder: String::new(),
             launch_at_startup: true,
+            show_beaver: true,
+            beaver_pos: None,
         }
     }
 }
@@ -69,6 +75,7 @@ pub fn save(app: &AppHandle, s: &Settings) -> std::io::Result<()> {
 pub fn apply(app: &AppHandle, s: &Settings) {
     use tauri_plugin_autostart::ManagerExt;
     trigger::set_enabled(s.enabled);
+    crate::beaver::set_visible(s.show_beaver);
     trigger::set_key(match s.trigger {
         Trigger::Shift => TriggerKey::Shift,
         Trigger::CtrlShift => TriggerKey::CtrlShift,

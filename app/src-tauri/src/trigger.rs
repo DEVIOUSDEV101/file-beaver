@@ -60,7 +60,11 @@ pub enum TriggerKey {
 #[derive(Serialize, Clone, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RingEvent {
-    Show { backdrop: Option<String> },
+    /// `beaver`: where the floating beaver sits under the ring, as (x, y, radius) in the
+    /// ring's logical px, when the ring was opened from it and covers it.
+    Show { backdrop: Option<String>, beaver: Option<(f64, f64, f64)> },
+    /// A file was let go on the beaver; the ring now waits for a click.
+    Held,
     Menu { menu: Menu, page: usize },
     Page { page: usize },
     Hover { index: i32 },
@@ -77,6 +81,9 @@ pub struct Hooks {
     pub on_ring: Box<dyn Fn(RingEvent) + Send + Sync>,
     /// (segment id such as "tool:crop", dropped paths)
     pub on_drop: Box<dyn Fn(String, Vec<String>) + Send + Sync>,
+    /// Where the floating beaver was last left; None = default corner.
+    pub beaver_pos: Option<(i32, i32)>,
+    pub on_beaver: Box<dyn Fn(crate::beaver::BeaverEvent) + Send + Sync>,
 }
 
 static HOOKS: OnceLock<Hooks> = OnceLock::new();
@@ -91,6 +98,12 @@ static DRAGGING: AtomicBool = AtomicBool::new(false);
 static SHOWN: AtomicBool = AtomicBool::new(false);
 /// Windows confirmed a file drag over the ring.
 static FILE_DRAG: AtomicBool = AtomicBool::new(false);
+/// The ring was opened by dragging onto the floating beaver.
+static FROM_BEAVER: AtomicBool = AtomicBool::new(false);
+/// Files were dropped on the beaver: the ring stays open and you click an action.
+static CLICK_MODE: AtomicBool = AtomicBool::new(false);
+/// The files waiting for a click while in click mode.
+static PENDING: Mutex<Vec<String>> = Mutex::new(Vec::new());
 static DOWN_X: AtomicI32 = AtomicI32::new(0);
 static DOWN_Y: AtomicI32 = AtomicI32::new(0);
 static CENTER_X: AtomicI32 = AtomicI32::new(0);
@@ -134,6 +147,16 @@ pub fn show_no_activate(hwnd: isize) {
     }
 }
 
+/// Opens the ring centred on a screen point (used by the floating beaver: a file dragged
+/// onto it opens the ring without Shift). Ignored while disabled or already open.
+pub(crate) fn open_ring_at(x: i32, y: i32) {
+    log::info!("beaver: file arrived (enabled={}, ring open={})", ENABLED.load(SeqCst), SHOWN.load(SeqCst));
+    if ENABLED.load(SeqCst) && !SHOWN.swap(true, SeqCst) {
+        FROM_BEAVER.store(true, SeqCst);
+        post(WM_APP_SHOW, x as usize, y as isize);
+    }
+}
+
 /// Current cursor position in physical pixels.
 pub fn cursor_pos() -> (i32, i32) {
     let mut pt = POINT::default();
@@ -158,7 +181,7 @@ pub fn start(hooks: Hooks) {
         .expect("spawn trigger thread");
 }
 
-fn hooks() -> &'static Hooks {
+pub(crate) fn hooks() -> &'static Hooks {
     HOOKS.get().expect("trigger started")
 }
 
@@ -204,6 +227,16 @@ fn segment_count() -> usize {
 }
 
 fn hit(x: i32, y: i32) -> i32 {
+    // Near a screen corner the ring is pushed inwards, so a petal can lie over the beaver.
+    // While dragging, the beaver itself still counts as the hub: letting go on it keeps the
+    // ring open for a click instead of firing whichever petal happens to be there.
+    if FROM_BEAVER.load(SeqCst) && !CLICK_MODE.load(SeqCst) {
+        if let Some((l, t, r, b)) = crate::beaver::visible_rect() {
+            if x >= l && x < r && y >= t && y < b {
+                return -1;
+            }
+        }
+    }
     let dx = (x - CENTER_X.load(SeqCst)) as f64;
     let dy = (y - CENTER_Y.load(SeqCst)) as f64;
     wedge_index(dx, dy, RADIUS.load(SeqCst) as f64, segment_count())
@@ -248,11 +281,18 @@ unsafe fn mouse_hook_body(code: i32, wparam: WPARAM, lparam: LPARAM) {
                 SHIFT_HELD.store(held(VK_SHIFT), SeqCst);
                 CTRL_HELD.store(held(VK_CONTROL), SeqCst);
                 ALT_HELD.store(held(VK_MENU), SeqCst);
+                // In click mode, a click outside the ring closes it.
+                if CLICK_MODE.load(SeqCst) {
+                    let (dx, dy) = ((x - CENTER_X.load(SeqCst)) as f64, (y - CENTER_Y.load(SeqCst)) as f64);
+                    if (dx * dx + dy * dy).sqrt() > RADIUS.load(SeqCst) as f64 {
+                        post(WM_APP_HIDE, 0, 0);
+                    }
+                }
             }
             WM_LBUTTONUP => {
                 BUTTON_DOWN.store(false, SeqCst);
                 DRAGGING.store(false, SeqCst);
-                if SHOWN.load(SeqCst) {
+                if SHOWN.load(SeqCst) && !CLICK_MODE.load(SeqCst) {
                     // give OLE time to deliver Drop before we hide
                     post(WM_APP_HIDE, 250, 0);
                 }
@@ -292,6 +332,14 @@ unsafe fn keyboard_hook_body(code: i32, wparam: WPARAM, lparam: LPARAM) {
             VK_MENU | VK_LMENU | VK_RMENU => ALT_HELD.store(pressed, SeqCst),
             _ => {}
         }
+        if CLICK_MODE.load(SeqCst) {
+            if pressed && vk == VK_ESCAPE {
+                post(WM_APP_HIDE, 0, 0);
+            } else if !before && trigger_held() {
+                post(WM_APP_FLIP, 0, 0);
+            }
+            return;
+        }
         // Key-repeat keeps `before` true, so only a fresh press counts.
         if ENABLED.load(SeqCst) && !before && trigger_held() && DRAGGING.load(SeqCst) {
             if SHOWN.swap(true, SeqCst) {
@@ -316,7 +364,7 @@ struct DropTarget {
     described: RefCell<Option<String>>,
 }
 
-fn hdrop_format() -> FORMATETC {
+pub(crate) fn hdrop_format() -> FORMATETC {
     FORMATETC {
         cfFormat: CF_HDROP.0,
         ptd: std::ptr::null_mut(),
@@ -387,18 +435,22 @@ impl DropTarget_Impl {
         *self.described.borrow_mut() = label;
     }
 
-    /// Hover + effect for a point; COPY only over an enabled segment.
+    /// Hover + effect for a point; COPY over an enabled segment, and over the hub when the
+    /// ring came from the beaver (letting go there keeps the ring open for a click; Windows
+    /// only delivers the drop if the last hover accepted it).
     fn track(&self, pt: &POINTL, effect: *mut DROPEFFECT) {
         let w = hit(pt.x, pt.y);
         set_hover(w);
         let seg = segment(w);
+        let hold = seg.is_none() && w < 0 && FROM_BEAVER.load(SeqCst);
         unsafe {
             if !effect.is_null() {
                 let copy_allowed = (*effect).0 & DROPEFFECT_COPY.0 != 0;
-                *effect = if seg.is_some() && copy_allowed { DROPEFFECT_COPY } else { DROPEFFECT_NONE };
+                *effect = if (seg.is_some() || hold) && copy_allowed { DROPEFFECT_COPY } else { DROPEFFECT_NONE };
             }
         }
-        self.update_description(seg.map(|(_, label)| label));
+        let label = if hold { Some("Choose an action".to_string()) } else { seg.map(|(_, label)| label) };
+        self.update_description(label);
     }
 }
 
@@ -460,9 +512,10 @@ impl DropTarget_Impl {
     fn drop(&self, obj: Option<&IDataObject>, _k: MODIFIERKEYS_FLAGS, pt: &POINTL, effect: *mut DROPEFFECT) -> Result<()> {
         let w = hit(pt.x, pt.y);
         let chosen = segment(w);
+        let hold = chosen.is_none() && w < 0 && FROM_BEAVER.load(SeqCst);
         unsafe {
             let copy_allowed = (*effect).0 & DROPEFFECT_COPY.0 != 0;
-            *effect = if chosen.is_some() && copy_allowed { DROPEFFECT_COPY } else { DROPEFFECT_NONE };
+            *effect = if (chosen.is_some() || hold) && copy_allowed { DROPEFFECT_COPY } else { DROPEFFECT_NONE };
         }
         self.update_description(None);
         if let (Some(h), Some(o)) = (&self.helper, obj) {
@@ -476,6 +529,21 @@ impl DropTarget_Impl {
                 emit(RingEvent::Chosen { index: w });
                 (hooks().on_drop)(id, paths);
                 post(WM_APP_HIDE, 160, 0); // let the chosen petal pulse
+            }
+            // Dropped on the beaver itself (the hub): keep the ring open and wait for a click.
+            _ if w < 0 && FROM_BEAVER.load(SeqCst) && obj.is_some() => {
+                let paths = obj.and_then(read_paths).unwrap_or_default();
+                if paths.is_empty() {
+                    post(WM_APP_HIDE, 0, 0);
+                } else {
+                    log::info!("dropped on the beaver, waiting for a click: {paths:?}");
+                    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = paths;
+                    CLICK_MODE.store(true, SeqCst);
+                    emit(RingEvent::Held);
+                    unsafe {
+                        let _ = KillTimer(overlay(), TIMER_HIDE);
+                    }
+                }
             }
             _ => {
                 log::info!("drop cancelled (hub, outside, or disabled segment)");
@@ -543,9 +611,12 @@ unsafe fn show_at(x: i32, y: i32) {
 
         // Capture before either window is visible.
         let backdrop = capture::backdrop(cx - r, cy - r, 2 * r);
-        emit(RingEvent::Show { backdrop });
-
         let (left, top) = (cx - win / 2, cy - win / 2);
+        let beaver = crate::beaver::visible_rect().filter(|_| FROM_BEAVER.load(SeqCst)).map(|(l, t, rt, b)| {
+            (((l + rt) / 2 - left) as f64 / scale, ((t + b) / 2 - top) as f64 / scale, (rt - l) as f64 / scale / 2.0)
+        });
+        emit(RingEvent::Show { backdrop, beaver });
+
         let flags = SWP_NOACTIVATE | SWP_SHOWWINDOW;
 
         // The drop target first, on top of everything.
@@ -593,8 +664,27 @@ fn hide() {
         emit(RingEvent::Hide);
     }
     FILE_DRAG.store(false, SeqCst);
+    FROM_BEAVER.store(false, SeqCst);
+    CLICK_MODE.store(false, SeqCst);
+    PENDING.lock().unwrap_or_else(|e| e.into_inner()).clear();
     HOVER.store(-1, SeqCst);
     *menu_lock() = None;
+}
+
+/// A click on the open ring in click mode: run the petal, or flip pages on the hub.
+fn click_at(x: i32, y: i32) {
+    let w = hit(x, y);
+    if let Some((id, _)) = segment(w) {
+        let paths = std::mem::take(&mut *PENDING.lock().unwrap_or_else(|e| e.into_inner()));
+        log::info!("click action={id} files={paths:?}");
+        emit(RingEvent::Chosen { index: w });
+        CLICK_MODE.store(false, SeqCst);
+        (hooks().on_drop)(id, paths);
+        post(WM_APP_HIDE, 160, 0);
+    } else if w < 0 {
+        // The hub (the beaver): switch Convert / Tools.
+        flip_page();
+    }
 }
 
 unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
@@ -613,6 +703,11 @@ unsafe fn wndproc_body(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
                 LRESULT(0)
             }
             WM_APP_HIDE => {
+                // A delayed hide comes from the mouse button going up after a drop; in
+                // click mode the ring must stay open.
+                if wparam.0 != 0 && CLICK_MODE.load(SeqCst) {
+                    return LRESULT(0);
+                }
                 if wparam.0 == 0 {
                     hide()
                 } else {
@@ -628,6 +723,18 @@ unsafe fn wndproc_body(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
                 } else if wparam.0 == TIMER_HIDE {
                     hide();
                 }
+                LRESULT(0)
+            }
+            WM_MOUSEMOVE if CLICK_MODE.load(SeqCst) => {
+                let mut pt = POINT::default();
+                let _ = GetCursorPos(&mut pt);
+                set_hover(hit(pt.x, pt.y));
+                LRESULT(0)
+            }
+            WM_LBUTTONUP if CLICK_MODE.load(SeqCst) => {
+                let mut pt = POINT::default();
+                let _ = GetCursorPos(&mut pt);
+                click_at(pt.x, pt.y);
                 LRESULT(0)
             }
             _ => DefWindowProcW(hwnd, msg, wparam, lparam),
@@ -665,6 +772,10 @@ unsafe fn run() -> Result<()> {
         let helper: Option<IDropTargetHelper> = CoCreateInstance(&CLSID_DragDropHelper, None, CLSCTX_INPROC_SERVER).ok();
         let target: IDropTarget = DropTarget { helper, data: RefCell::new(None), described: RefCell::new(None) }.into();
         RegisterDragDrop(hwnd, &target)?;
+        // The floating beaver lives on this thread too (it needs OLE and this message loop).
+        if let Err(e) = crate::beaver::create(hinst, hooks().beaver_pos) {
+            log::error!("couldn't create the floating beaver: {e:?}");
+        }
 
         // The hooks get a thread of their own that does nothing but receive input and post
         // messages here. Windows skips (and can eventually remove) a low-level hook whose

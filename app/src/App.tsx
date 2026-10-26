@@ -10,6 +10,8 @@ type Settings = {
   output: "beside" | "folder";
   output_folder: string;
   launch_at_startup: boolean;
+  show_beaver: boolean;
+  beaver_pos: [number, number] | null;
 };
 
 const TRIGGERS: { value: Settings["trigger"]; label: string }[] = [
@@ -105,6 +107,11 @@ export default function App() {
           />
         </label>
       )}
+
+      <label className="row">
+        <span>Show the beaver on screen (drop files on it)</span>
+        <input type="checkbox" checked={s.show_beaver} onChange={(e) => update({ show_beaver: e.target.checked })} />
+      </label>
 
       <label className="row">
         <span>Launch at startup</span>

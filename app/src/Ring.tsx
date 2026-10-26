@@ -18,7 +18,8 @@ const PLACEHOLDER_SEGMENTS = 8;
 type Segment = { id: string; label: string; icon: string | null; enabled: boolean };
 type Menu = { pages: [Segment[], Segment[]]; start_page: number; title: string };
 type RingEvent =
-  | { type: "show"; backdrop: string | null }
+  | { type: "show"; backdrop: string | null; beaver: [number, number, number] | null }
+  | { type: "held" }
   | { type: "menu"; menu: Menu; page: number }
   | { type: "page"; page: number }
   | { type: "hover"; index: number }
@@ -92,6 +93,9 @@ export default function Ring() {
   const [hover, setHover] = useState(-1);
   const [thumb, setThumb] = useState<string | null>(null);
   const [chosen, setChosen] = useState(-1);
+  // Where the floating beaver sits under the ring while a file is dragged from it, so you
+  // can see where to let go; null once the file is down (then you click a petal).
+  const [beaver, setBeaver] = useState<[number, number, number] | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.add("ring-root");
@@ -105,6 +109,10 @@ export default function Ring() {
           setHover(-1);
           setThumb(null);
           setChosen(-1);
+          setBeaver(e.beaver);
+          break;
+        case "held":
+          setBeaver(null);
           break;
         case "menu":
           setMenu(e.menu);
@@ -141,6 +149,8 @@ export default function Ring() {
   const n = segs.length;
   const hovered = hover >= 0 ? segs[hover] : undefined;
   const pill = hovered?.enabled ? hovered.label : menu?.title ?? "";
+  // Only worth drawing when the ring was pushed off-centre and covers the beaver.
+  const marker = beaver && Math.hypot(beaver[0] - C, beaver[1] - C) > HUB ? beaver : null;
 
   return (
     <svg className="ring" key={shown} viewBox={`0 0 ${WIN} ${WIN}`}>
@@ -206,6 +216,18 @@ export default function Ring() {
             <div className={`pill ${hovered?.enabled ? "action" : ""}`}>{pill}</div>
           </div>
         </foreignObject>
+      )}
+      {marker && (
+        <g className="beaver-spot">
+          <circle cx={marker[0]} cy={marker[1]} r={marker[2] * 0.82} />
+          <image
+            href="/beaver.svg"
+            x={marker[0] - marker[2] * 0.62}
+            y={marker[1] - marker[2] * 0.62}
+            width={marker[2] * 1.24}
+            height={marker[2] * 1.24}
+          />
+        </g>
       )}
     </svg>
   );

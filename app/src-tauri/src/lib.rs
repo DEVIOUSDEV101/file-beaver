@@ -1,3 +1,4 @@
+mod beaver;
 mod capture;
 mod crash;
 mod editor;
@@ -18,6 +19,7 @@ use tauri::{AppHandle, Emitter, Manager, State, WindowEvent, Wry};
 pub(crate) struct AppState {
     pub(crate) settings: Mutex<Settings>,
     enabled_item: CheckMenuItem<Wry>,
+    beaver_item: CheckMenuItem<Wry>,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -36,6 +38,7 @@ fn save_settings(app: AppHandle, state: State<AppState>, settings: Settings) -> 
     settings::save(&app, &settings).map_err(|e| e.to_string())?;
     settings::apply(&app, &settings);
     let _ = state.enabled_item.set_checked(settings.enabled);
+    let _ = state.beaver_item.set_checked(settings.show_beaver);
     *state.settings.lock().unwrap_or_else(|e| e.into_inner()) = settings;
     log::info!("settings saved");
     Ok(())
@@ -113,6 +116,19 @@ fn set_enabled(app: &AppHandle, on: bool) {
     let _ = app.emit("settings-changed", s.clone());
 }
 
+/// Shows or hides the floating beaver and remembers the choice.
+fn set_beaver(app: &AppHandle, on: bool) {
+    let state = app.state::<AppState>();
+    let mut s = state.settings.lock().unwrap_or_else(|e| e.into_inner());
+    s.show_beaver = on;
+    beaver::set_visible(on);
+    let _ = state.beaver_item.set_checked(on);
+    if let Err(e) = settings::save(app, &s) {
+        log::warn!("could not save settings: {e}");
+    }
+    let _ = app.emit("settings-changed", s.clone());
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // First thing, so even a crash during startup leaves a report.
@@ -149,10 +165,11 @@ pub fn run() {
             let s = settings::load(&handle);
 
             let enabled_item = CheckMenuItem::with_id(app, "enabled", "Enabled", true, s.enabled, None::<&str>)?;
+            let beaver_item = CheckMenuItem::with_id(app, "beaver", "Show beaver", true, s.show_beaver, None::<&str>)?;
             let settings_item = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit File Beaver", true, None::<&str>)?;
             let sep = PredefinedMenuItem::separator(app)?;
-            let menu = Menu::with_items(app, &[&enabled_item, &settings_item, &sep, &quit_item])?;
+            let menu = Menu::with_items(app, &[&enabled_item, &beaver_item, &settings_item, &sep, &quit_item])?;
 
             TrayIconBuilder::with_id("tray")
                 // Flat beaver: the glass app icon turns to mush at tray size.
@@ -165,6 +182,10 @@ pub fn run() {
                         let on = !app.state::<AppState>().settings.lock().unwrap_or_else(|e| e.into_inner()).enabled;
                         set_enabled(app, on);
                     }
+                    "beaver" => {
+                        let on = !app.state::<AppState>().settings.lock().unwrap_or_else(|e| e.into_inner()).show_beaver;
+                        set_beaver(app, on);
+                    }
                     "settings" => show_settings(app),
                     "quit" => app.exit(0),
                     _ => {}
@@ -176,7 +197,7 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            app.manage(AppState { settings: Mutex::new(s.clone()), enabled_item });
+            app.manage(AppState { settings: Mutex::new(s.clone()), enabled_item, beaver_item });
             settings::apply(&handle, &s);
 
             let ring = app.get_webview_window("ring").expect("ring window in tauri.conf.json");
@@ -192,7 +213,22 @@ pub fn run() {
             let jobs = jobs::Jobs::start(handle.clone());
             let ring_emitter = handle.clone();
             let drop_handle = handle.clone();
+            let beaver_handle = handle.clone();
             trigger::start(trigger::Hooks {
+                beaver_pos: s.beaver_pos,
+                // Runs on the drag thread: quick settings updates only.
+                on_beaver: Box::new(move |e| match e {
+                    beaver::BeaverEvent::Moved(x, y) => {
+                        let state = beaver_handle.state::<AppState>();
+                        let mut s = state.settings.lock().unwrap_or_else(|e| e.into_inner());
+                        s.beaver_pos = Some((x, y));
+                        if let Err(e) = settings::save(&beaver_handle, &s) {
+                            log::warn!("could not save the beaver's position: {e}");
+                        }
+                    }
+                    beaver::BeaverEvent::Hidden => set_beaver(&beaver_handle, false),
+                    beaver::BeaverEvent::OpenSettings => show_settings(&beaver_handle),
+                }),
                 ring_hwnd,
                 caps,
                 on_ring: Box::new(move |e| {

@@ -1,7 +1,11 @@
 # File Beaver
 
-**Drag a file, tap Shift, get things done.** File Beaver adds a radial menu to file drags
-on Windows. Drag any image or PDF, tap <kbd>Shift</kbd>, and drop it on what you want:
+**Drag a file onto the beaver, get things done.** File Beaver puts a little beaver on your
+Windows desktop. Drag any image or PDF onto him and a ring of actions opens around him
+(or hold a file anywhere and tap <kbd>Shift</kbd>):
+
+![The File Beaver ring open on a Windows desktop](branding/screenshot-ring.jpg)
+
 
 - **Convert** to JPG, PNG, WEBP, HEIC, TIFF, AVIF, BMP, PDF or DOCX
 - **Compress** photos and PDFs
@@ -14,22 +18,39 @@ Free and open source (MIT). Works offline: File Beaver only goes online to check
 
 ## Install
 
-Download the latest `File.Beaver_x.y.z_x64-setup.exe` from
-[Releases](https://github.com/DEVIOUSDEV101/file-beaver/releases) and run it.
-It installs for your user account only (no admin prompt) and updates itself.
+1. Download **`File.Beaver_x.y.z_x64-setup.exe`** from the
+   [latest release](https://github.com/DEVIOUSDEV101/file-beaver/releases/latest).
+2. Run it. It installs in a few seconds for your user account only (no admin prompt),
+   starts with Windows, and updates itself.
+
+**"Windows protected your PC"?** The installer isn't code-signed yet, so Windows
+SmartScreen warns about any new app it hasn't seen many downloads of. Click
+**More info**, then **Run anyway**. The source code is all here if you'd rather build it
+yourself.
 
 Requires Windows 10 or 11 (64-bit). HEIC needs Microsoft's HEIF and HEVC extensions
 from the Microsoft Store; File Beaver greys HEIC out if they're missing.
 
 ## How to use
 
-1. Start dragging any file (from Explorer, the desktop, a browser download).
-2. Tap <kbd>Shift</kbd>: the ring opens with **Convert** options.
-3. Tap <kbd>Shift</kbd> again to switch to **Tools**.
-4. Drop on a petal. Drop in the centre, drag away, or press <kbd>Esc</kbd> to cancel.
+**With the beaver** (he lives on your desktop, behind your windows, and pops up when you
+drag a file):
 
-The trigger key (Shift, Ctrl+Shift or Alt) and where results are saved can be changed in
-Settings (click the tray icon).
+1. Drag any file (from Explorer, the desktop, a browser download) onto the beaver.
+2. The ring opens around him. Slide onto an action and let go.
+3. Or let go right on the beaver: the ring stays open, then click an action.
+
+**With Shift** (anywhere on screen):
+
+1. Start dragging a file and tap <kbd>Shift</kbd>: the ring opens under your cursor.
+2. Drop on an action. Drop in the centre, drag away, or press <kbd>Esc</kbd> to cancel.
+
+Images open on **Tools** (Crop, Add BG…), PDFs on **Convert**. Click the centre, or tap
+<kbd>Shift</kbd> again, to switch.
+
+Move the beaver by dragging him; right-click him to hide him (bring him back from the
+tray icon). The trigger key (Shift, Ctrl+Shift or Alt) and where results are saved can be
+changed in Settings (click the tray icon).
 
 ## Privacy
 

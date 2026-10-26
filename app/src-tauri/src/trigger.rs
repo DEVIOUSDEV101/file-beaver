@@ -10,7 +10,7 @@
 
 use std::cell::RefCell;
 use std::mem::ManuallyDrop;
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicIsize, AtomicU8, AtomicUsize, Ordering::SeqCst};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicIsize, AtomicU32, AtomicU8, AtomicUsize, Ordering::SeqCst};
 use std::sync::{Mutex, OnceLock};
 
 use serde::Serialize;
@@ -43,8 +43,14 @@ const PLACEHOLDER_SEGMENTS: usize = 8;
 const WM_APP_SHOW: u32 = WM_APP + 1;
 const WM_APP_HIDE: u32 = WM_APP + 2;
 const WM_APP_FLIP: u32 = WM_APP + 3;
+const WM_APP_DRAG_WATCH: u32 = WM_APP + 4;
 const TIMER_VERIFY: usize = 1;
 const TIMER_HIDE: usize = 2;
+const TIMER_DRAG_WATCH: usize = 3;
+/// While the button is down after a drag starts, how often to check for a file drag, and
+/// how many checks after letting go before the beaver goes back down (the drop lands first).
+const DRAG_WATCH_MS: u32 = 60;
+const DRAG_WATCH_TAIL: u32 = 5;
 const VERIFY_MS: u32 = 800;
 
 /// Which key combination opens the ring.
@@ -94,6 +100,8 @@ static OVERLAY: AtomicIsize = AtomicIsize::new(0);
 static BUTTON_DOWN: AtomicBool = AtomicBool::new(false);
 /// Button held and moved past the system drag threshold.
 static DRAGGING: AtomicBool = AtomicBool::new(false);
+/// Drag-watch ticks since the button went up.
+static DRAG_TAIL: AtomicU32 = AtomicU32::new(0);
 /// Ring visible or about to be.
 static SHOWN: AtomicBool = AtomicBool::new(false);
 /// Windows confirmed a file drag over the ring.
@@ -106,6 +114,8 @@ static CLICK_MODE: AtomicBool = AtomicBool::new(false);
 static PENDING: Mutex<Vec<String>> = Mutex::new(Vec::new());
 static DOWN_X: AtomicI32 = AtomicI32::new(0);
 static DOWN_Y: AtomicI32 = AtomicI32::new(0);
+/// Thread that owns the window the button went down on: a drag from there runs on it.
+static DOWN_THREAD: AtomicU32 = AtomicU32::new(0);
 static CENTER_X: AtomicI32 = AtomicI32::new(0);
 static CENTER_Y: AtomicI32 = AtomicI32::new(0);
 /// Ring radius in physical pixels for the monitor it is on.
@@ -275,6 +285,7 @@ unsafe fn mouse_hook_body(code: i32, wparam: WPARAM, lparam: LPARAM) {
                 DRAGGING.store(false, SeqCst);
                 DOWN_X.store(x, SeqCst);
                 DOWN_Y.store(y, SeqCst);
+                DOWN_THREAD.store(unsafe { GetWindowThreadProcessId(WindowFromPoint(POINT { x, y }), None) }, SeqCst);
                 // Re-read the real modifier state each press: if Windows ever skipped a
                 // key-up for this hook, Shift would otherwise stay "held" and taps be ignored.
                 let held = |vk: VIRTUAL_KEY| unsafe { (GetAsyncKeyState(vk.0 as i32) as u16 & 0x8000) != 0 };
@@ -304,6 +315,7 @@ unsafe fn mouse_hook_body(code: i32, wparam: WPARAM, lparam: LPARAM) {
                 };
                 if crossed {
                     DRAGGING.store(true, SeqCst);
+                    post(WM_APP_DRAG_WATCH, 0, 0);
                     // Key already held when the drag began counts as a tap.
                     if trigger_held() && !SHOWN.swap(true, SeqCst) {
                         post(WM_APP_SHOW, x as usize, y as isize);
@@ -671,6 +683,24 @@ fn hide() {
     *menu_lock() = None;
 }
 
+/// True while some app is running an OLE drag-and-drop: its thread hands mouse capture to
+/// OLE's hidden clipboard window for the whole drag. Window moves and text selections don't.
+/// Checks the thread the drag started on (which needn't be the foreground one) and the
+/// foreground thread.
+fn file_drag_under_way() -> bool {
+    let captured_by_ole = |thread: u32| unsafe {
+        let mut info = GUITHREADINFO { cbSize: std::mem::size_of::<GUITHREADINFO>() as u32, ..Default::default() };
+        if GetGUIThreadInfo(thread, &mut info).is_err() || info.hwndCapture.is_invalid() {
+            return false;
+        }
+        let mut name = [0u16; 32];
+        let n = GetClassNameW(info.hwndCapture, &mut name) as usize;
+        String::from_utf16_lossy(&name[..n]) == "CLIPBRDWNDCLASS"
+    };
+    let down = DOWN_THREAD.load(SeqCst);
+    (down != 0 && captured_by_ole(down)) || captured_by_ole(0)
+}
+
 /// A click on the open ring in click mode: run the petal, or flip pages on the hub.
 fn click_at(x: i32, y: i32) {
     let w = hit(x, y);
@@ -696,6 +726,22 @@ unsafe fn wndproc_body(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
         match msg {
             WM_APP_SHOW => {
                 show_at(wparam.0 as i32, lparam.0 as i32);
+                LRESULT(0)
+            }
+            WM_APP_DRAG_WATCH => {
+                DRAG_TAIL.store(0, SeqCst);
+                SetTimer(hwnd, TIMER_DRAG_WATCH, DRAG_WATCH_MS, None);
+                LRESULT(0)
+            }
+            WM_TIMER if wparam.0 == TIMER_DRAG_WATCH => {
+                if BUTTON_DOWN.load(SeqCst) {
+                    if file_drag_under_way() {
+                        crate::beaver::raise(true);
+                    }
+                } else if DRAG_TAIL.fetch_add(1, SeqCst) >= DRAG_WATCH_TAIL {
+                    let _ = KillTimer(hwnd, TIMER_DRAG_WATCH);
+                    crate::beaver::raise(false);
+                }
                 LRESULT(0)
             }
             WM_APP_FLIP => {

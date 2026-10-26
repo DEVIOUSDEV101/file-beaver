@@ -2,6 +2,8 @@
 //!
 //! Page 0 is the Convert ring (target formats), page 1 the Tools ring. Order is clockwise
 //! from the top, matching the reference app (for a JPG: PNG at the top, DOCX top-left).
+//! Like the reference, images open on Tools and PDFs on Convert; tapping the key again
+//! (or clicking the hub) switches.
 
 use std::path::Path;
 
@@ -23,7 +25,7 @@ pub struct Segment {
 pub struct Menu {
     pub pages: [Vec<Segment>; 2],
     pub start_page: usize,
-    /// File name, or "3 files".
+    /// Shown in the hub: the file's size ("1.2 MB"), or "3 files".
     pub title: String,
 }
 
@@ -105,12 +107,32 @@ fn tools_page(formats: &[Option<Format>], caps: &Caps) -> Vec<Segment> {
 pub fn build(paths: &[String], caps: &Caps) -> Menu {
     let formats: Vec<Option<Format>> = paths.iter().map(|p| Format::from_path(Path::new(p))).collect();
     let convert = convert_page(&formats, caps);
-    let start_page = if convert.iter().any(|s| s.enabled) { CONVERT_PAGE } else { TOOLS_PAGE };
+    let tools = tools_page(&formats, caps);
+    let images = formats.iter().all(|f| f.is_some_and(|f| f.is_image()));
+    let start_page = if convert.iter().any(|s| s.enabled) && !(images && tools.iter().any(|s| s.enabled)) {
+        CONVERT_PAGE
+    } else {
+        TOOLS_PAGE
+    };
     let title = match paths {
-        [one] => Path::new(one).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+        [one] => match std::fs::metadata(one) {
+            Ok(m) => human_size(m.len()),
+            Err(_) => Path::new(one).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+        },
         many => format!("{} files", many.len()),
     };
-    Menu { pages: [convert, tools_page(&formats, caps)], start_page, title }
+    Menu { pages: [convert, tools], start_page, title }
+}
+
+/// "840 KB", "1.2 MB", "12 MB": one decimal only below 10.
+pub fn human_size(bytes: u64) -> String {
+    let (value, unit) = match bytes {
+        b if b >= 1 << 30 => (b as f64 / (1u64 << 30) as f64, "GB"),
+        b if b >= 1 << 20 => (b as f64 / (1u64 << 20) as f64, "MB"),
+        b if b >= 1 << 10 => (b as f64 / 1024.0, "KB"),
+        b => return format!("{b} B"),
+    };
+    if value < 10.0 { format!("{value:.1} {unit}") } else { format!("{value:.0} {unit}") }
 }
 
 #[cfg(test)]
@@ -132,7 +154,7 @@ mod tests {
             ids(&m.pages[CONVERT_PAGE]),
             ["convert:png", "convert:webp", "convert:heic", "convert:tiff", "convert:avif", "convert:bmp", "convert:pdf", "convert:docx"]
         );
-        assert_eq!(m.start_page, CONVERT_PAGE);
+        assert_eq!(m.start_page, TOOLS_PAGE);
         assert_eq!(m.title, "Page 001.jpg");
     }
 
@@ -149,6 +171,7 @@ mod tests {
     #[test]
     fn pdf_skips_pdf_target_and_image_only_tools() {
         let m = build(&["doc.PDF".into()], &Caps::ALL);
+        assert_eq!(m.start_page, CONVERT_PAGE);
         assert!(!ids(&m.pages[CONVERT_PAGE]).contains(&"convert:pdf"));
         assert!(ids(&m.pages[CONVERT_PAGE]).contains(&"convert:jpg"));
         assert_eq!(
@@ -183,6 +206,18 @@ mod tests {
         let m = build(&["IMG_0001.HEIC".into()], &no_heic);
         assert!(enabled(&m.pages[CONVERT_PAGE]).is_empty());
         assert!(enabled(&m.pages[TOOLS_PAGE]).is_empty());
+    }
+
+    #[test]
+    fn hub_shows_the_file_size() {
+        assert_eq!(human_size(512), "512 B");
+        assert_eq!(human_size(840 * 1024), "840 KB");
+        assert_eq!(human_size(1_258_291), "1.2 MB");
+        assert_eq!(human_size(12 * 1024 * 1024), "12 MB");
+        let p = std::env::temp_dir().join("filebeaver-size-test.jpg");
+        std::fs::write(&p, vec![0u8; 3 * 1024]).unwrap();
+        assert_eq!(build(&[p.to_string_lossy().into_owned()], &Caps::ALL).title, "3.0 KB");
+        let _ = std::fs::remove_file(p);
     }
 
     #[test]

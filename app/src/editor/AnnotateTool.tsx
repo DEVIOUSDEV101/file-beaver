@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Circle, Hash, Highlighter, Pencil, Redo2, Square, Type, Undo2 } from "lucide-react";
 import { drawShapes, Pt, Shape, ShapeKind } from "./render";
 import { IconButton, norm, Paint, Section, Stage } from "./ui";
@@ -49,6 +49,13 @@ export default function AnnotateTool({ img, page, s, set }: { img: ImageBitmap; 
   const [draft, setDraft] = useState<Shape | null>(null);
   const [typing, setTyping] = useState<{ at: Pt; text: string } | null>(null);
   const area = useRef<HTMLDivElement>(null);
+  const entry = useRef<HTMLTextAreaElement>(null);
+  // Focus the new text box once it's on screen: autoFocus alone loses to the click that
+  // opened it, whose default action moves focus off the box again.
+  const typingAt = typing ? typing.at.join() : null;
+  useEffect(() => {
+    if (typingAt) entry.current?.focus();
+  }, [typingAt]);
   const shapes = s.pages[page] ?? [];
 
   const commit = (shape: Shape) => set({ pages: { ...s.pages, [page]: [...shapes, shape] }, past: [...s.past, s.pages], future: [] });
@@ -67,7 +74,10 @@ export default function AnnotateTool({ img, page, s, set }: { img: ImageBitmap; 
   const onDown = (e: React.PointerEvent) => {
     if (typing) return finishTyping();
     const p = norm(e, area.current!);
-    if (kind === "text") return setTyping({ at: p, text: "" });
+    if (kind === "text") {
+      e.preventDefault();
+      return setTyping({ at: p, text: "" });
+    }
     if (kind === "step") return commit({ ...base([p]), n: shapes.filter((x) => x.kind === "step").length + 1 });
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     setDraft(base([p, p]));
@@ -103,6 +113,7 @@ export default function AnnotateTool({ img, page, s, set }: { img: ImageBitmap; 
             {typing && (
               <textarea
                 className="text-entry"
+                ref={entry}
                 autoFocus
                 value={typing.text}
                 placeholder="Type, then Enter"

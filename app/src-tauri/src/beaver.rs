@@ -3,6 +3,10 @@
 //! per-pixel-alpha window, so only the beaver's own pixels take clicks and drops; around
 //! it, everything passes through to the windows underneath.
 //!
+//! It sits on the desktop like a gadget, behind every other window, and rises on top only
+//! while a file is being dragged (the trigger thread calls [`raise`]), so it never covers
+//! your work but is there to drop onto.
+//!
 //! Lives on the trigger thread (which has OLE set up and a message loop). The app talks
 //! to it with [`set_visible`]; it reports back through `Hooks::on_beaver`.
 
@@ -29,6 +33,7 @@ const REST: f32 = 0.88;
 const PERKED: f32 = 1.0;
 
 const WM_APP_VISIBLE: u32 = WM_APP + 20;
+const WM_APP_RAISE: u32 = WM_APP + 21;
 const ID_SETTINGS: usize = 1;
 const ID_HIDE: usize = 2;
 
@@ -43,6 +48,7 @@ pub enum BeaverEvent {
 
 static HWND_RAW: AtomicIsize = AtomicIsize::new(0);
 static WANT_VISIBLE: AtomicBool = AtomicBool::new(true);
+static RAISED: AtomicBool = AtomicBool::new(false);
 static SIZE_PX: AtomicI32 = AtomicI32::new(76);
 static IMAGE: OnceLock<RgbaImage> = OnceLock::new();
 
@@ -61,6 +67,28 @@ pub fn set_visible(on: bool) {
         unsafe {
             let _ = PostMessageW(hwnd(), WM_APP_VISIBLE, WPARAM(on as usize), LPARAM(0));
         }
+    }
+}
+
+/// Brings the beaver above every window (a file drag is under way) or sends it back down
+/// to the desktop. Safe from any thread.
+pub(crate) fn raise(on: bool) {
+    if RAISED.swap(on, SeqCst) != on && HWND_RAW.load(SeqCst) != 0 {
+        unsafe {
+            let _ = PostMessageW(hwnd(), WM_APP_RAISE, WPARAM(on as usize), LPARAM(0));
+        }
+    }
+}
+
+/// Down to desktop level: owned by the desktop window (Windows keeps an owned window just
+/// above its owner, and Show desktop leaves it alone), below every normal window.
+unsafe fn sink(h: HWND) {
+    unsafe {
+        let _ = SetWindowPos(h, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        if let Ok(desktop) = FindWindowW(w!("Progman"), None) {
+            SetWindowLongPtrW(h, GWLP_HWNDPARENT, desktop.0 as isize);
+        }
+        let _ = SetWindowPos(h, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 }
 
@@ -195,6 +223,15 @@ unsafe fn wndproc_body(h: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
                 LRESULT(0)
             }
             WM_NCRBUTTONDOWN => LRESULT(0),
+            WM_APP_RAISE => {
+                if wp.0 != 0 {
+                    SetWindowLongPtrW(h, GWLP_HWNDPARENT, 0);
+                    let _ = SetWindowPos(h, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                } else {
+                    sink(h);
+                }
+                LRESULT(0)
+            }
             WM_APP_VISIBLE => {
                 let _ = ShowWindow(h, if wp.0 != 0 { SW_SHOWNOACTIVATE } else { SW_HIDE });
                 LRESULT(0)
@@ -283,7 +320,7 @@ pub(crate) unsafe fn create(hinst: HMODULE, start: Option<(i32, i32)>) -> Result
         };
         SIZE_PX.store(size, SeqCst);
         let h = CreateWindowExW(
-            WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+            WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
             class,
             w!("File Beaver"),
             WS_POPUP,
@@ -297,6 +334,7 @@ pub(crate) unsafe fn create(hinst: HMODULE, start: Option<(i32, i32)>) -> Result
             None,
         )?;
         HWND_RAW.store(h.0 as isize, SeqCst);
+        sink(h);
         paint(REST);
         let target: IDropTarget = BeaverDrop { perked: Cell::new(false) }.into();
         RegisterDragDrop(h, &target)?;

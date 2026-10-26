@@ -2,9 +2,6 @@
 
 How to cut a release. Everything here runs on Windows from the repo root unless noted.
 
-> **Not yet:** the Phase 8 redesign (own look, name, icon) must ship before any public
-> release. Until then, releases are for testing only.
-
 ## One-time setup
 
 | What | Where | Notes |

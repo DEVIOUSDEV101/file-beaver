@@ -1,0 +1,21 @@
+# Build output
+target/
+app/dist/
+app/node_modules/
+app/src-tauri/gen/
+
+# Generated during release (rebuilt by licensing/build-notices.mjs)
+licensing/rust-notices.txt
+
+# Never commit signing material (the updater key lives in %USERPROFILE%\.shiftdrop-keys)
+*.key
+*.pfx
+*.p12
+metadata.json
+
+# Editor / OS clutter
+.vscode/
+.idea/
+*.log
+Thumbs.db
+desktop.ini

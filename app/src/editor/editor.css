@@ -1,0 +1,451 @@
+/* Editor window. Warm palette matching the ring and card; Phase 8 restyles everything. */
+
+html.editor-root,
+html.editor-root body,
+html.editor-root #root {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.editor {
+  --bg: #fbf6f1;
+  --panel: #ffffff;
+  --stage: #ebe3da;
+  --ink: #3d2c20;
+  --muted: #8a7262;
+  --line: #eadfd4;
+  --accent: #e8571f;
+  --accent-ink: #ffffff;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .editor {
+    --bg: #211b17;
+    --panel: #2a231e;
+    --stage: #15110e;
+    --ink: #f3e9df;
+    --muted: #b09a8a;
+    --line: #3a302a;
+  }
+}
+
+/* Fixed bar heights keep the canvas position predictable (the e2e test relies on it). */
+.editor header {
+  box-sizing: border-box;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.editor h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.editor .file {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor main {
+  display: flex;
+  min-height: 0;
+}
+
+.stage {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  background: var(--stage);
+  overflow: hidden;
+}
+
+.stage.loading {
+  color: var(--muted);
+}
+
+.stage-content {
+  position: relative;
+  box-shadow: 0 4px 18px rgba(40, 20, 5, 0.18);
+  background:
+    repeating-conic-gradient(#d9d1c8 0% 25%, #f2ece6 0% 50%) 0 0 / 16px 16px;
+}
+
+.stage-content canvas {
+  display: block;
+}
+
+/* ---------- side panel ---------- */
+
+.panel {
+  box-sizing: border-box;
+  width: 264px;
+  flex: none;
+  padding: 6px 16px 16px;
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  overflow-y: auto;
+}
+
+.section {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.section h3 {
+  margin: 0 0 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row.wrap {
+  flex-wrap: wrap;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.chip.on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.icon-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.icon-btn.on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.slider {
+  display: block;
+  margin: 4px 0 10px;
+}
+
+.slider-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.slider-value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.slider input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.size-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.size-row input {
+  width: 64px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.unit,
+.note {
+  color: var(--muted);
+}
+
+.note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.note.warn {
+  margin-top: 14px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check input {
+  accent-color: var(--accent);
+}
+
+.link {
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.swatch {
+  aspect-ratio: 1;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch.on {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.swatch.custom {
+  position: relative;
+  overflow: hidden;
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+}
+
+.swatch.custom input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.dot {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+}
+
+.dot.on {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- crop ---------- */
+
+.crop-area,
+.draw-area {
+  position: relative;
+  touch-action: none;
+}
+
+.crop-area {
+  cursor: crosshair;
+}
+
+.shade-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.shade {
+  position: absolute;
+  box-shadow: 0 0 0 9999px rgba(20, 10, 0, 0.55);
+}
+
+.crop-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px solid #fff;
+  cursor: move;
+}
+
+.thirds {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px));
+  pointer-events: none;
+}
+
+.handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Bigger invisible grab area than the visible square. */
+.handle::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.handle.nw { left: 0; top: 0; cursor: nwse-resize; }
+.handle.n { left: 50%; top: 0; cursor: ns-resize; }
+.handle.ne { left: 100%; top: 0; cursor: nesw-resize; }
+.handle.e { left: 100%; top: 50%; cursor: ew-resize; }
+.handle.se { left: 100%; top: 100%; cursor: nwse-resize; }
+.handle.s { left: 50%; top: 100%; cursor: ns-resize; }
+.handle.sw { left: 0; top: 100%; cursor: nesw-resize; }
+.handle.w { left: 0; top: 50%; cursor: ew-resize; }
+
+/* ---------- annotate / redact ---------- */
+
+.draw-area {
+  cursor: crosshair;
+}
+
+.draw-area.tool-text {
+  cursor: text;
+}
+
+.text-entry {
+  position: absolute;
+  min-width: 120px;
+  min-height: 1.4em;
+  margin: 0;
+  padding: 0;
+  border: 1px dashed rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.6);
+  font-family: Arial, Helvetica, sans-serif;
+  resize: both;
+  outline: none;
+}
+
+.selection {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed var(--accent);
+  pointer-events: none;
+}
+
+/* ---------- footer ---------- */
+
+.editor footer {
+  box-sizing: border-box;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.error {
+  flex: 1;
+  color: #c8372d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+
+.primary {
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

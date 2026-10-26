@@ -1,0 +1,126 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "File Beaver",
+  "version": "0.1.0",
+  "identifier": "app.filebeaver.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "File Beaver Settings",
+        "width": 460,
+        "height": 560,
+        "resizable": false,
+        "visible": false,
+        "center": true
+      },
+      {
+        "label": "ring",
+        "url": "index.html#ring",
+        "width": 384,
+        "height": 384,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "visible": false,
+        "shadow": false,
+        "resizable": false,
+        "dragDropEnabled": false
+      },
+      {
+        "label": "toast",
+        "url": "index.html#toast",
+        "width": 340,
+        "height": 156,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "visible": false,
+        "shadow": false,
+        "resizable": false,
+        "dragDropEnabled": false
+      },
+      {
+        "label": "editor",
+        "url": "index.html#editor",
+        "title": "File Beaver",
+        "width": 1040,
+        "height": 740,
+        "minWidth": 760,
+        "minHeight": 540,
+        "visible": false,
+        "center": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "publisher": "File Beaver",
+    "copyright": "© 2026 File Beaver",
+    "category": "Utility",
+    "shortDescription": "Drag a file, tap Shift, convert or edit it.",
+    "longDescription": "File Beaver adds a radial menu to file drags on Windows: tap Shift while dragging to convert, compress, strip metadata, crop, annotate, redact and more. Works offline.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "installer-hooks.nsh",
+        "installerIcon": "icons/icon.ico"
+      },
+      "signCommand": {
+        "cmd": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "./sign.ps1",
+          "%1"
+        ]
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY0OUE1OURERUE5MTI5MTkKUldRWktaSHEzVm1hOUFTTFNiaUpUTXFJMnVWMFc1YkpOdDBydzd4ZWFnOWR3WnFZQzFvSjNab04K",
+      "endpoints": [
+        "https://github.com/DEVIOUSDEV101/file-beaver/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
+  "mainBinaryName": "File Beaver"
+}

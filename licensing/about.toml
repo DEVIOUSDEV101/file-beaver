@@ -1,0 +1,30 @@
+# Licences we accept in shipped code. Anything else (GPL, AGPL, unknown) fails the build
+# of THIRD_PARTY_NOTICES.txt, so it can't slip in unnoticed.
+accepted = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "0BSD",
+    "BSL-1.0",
+    "CC0-1.0",
+    "Unlicense",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    # File-level copyleft. Fine in a closed or open app as long as the source of these
+    # (unmodified) files stays available, which it does on crates.io; the notices say so.
+    # Comes from Tauri itself (cssparser, selectors, dtoa-short) and dirs (option-ext).
+    "MPL-2.0",
+    # Independent JPEG Group licence (jpeg-encoder). Permissive; requires the
+    # acknowledgement that is printed at the top of THIRD_PARTY_NOTICES.txt.
+    "IJG",
+]
+# Our own crates aren't published and get their licence once that's decided.
+private = { ignore = true }
+targets = ["x86_64-pc-windows-gnu"]
+ignore-build-dependencies = true
+ignore-dev-dependencies = true

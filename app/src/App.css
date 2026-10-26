@@ -1,0 +1,113 @@
+/* Settings window. Every rule is scoped to .settings: Vite bundles all windows' CSS
+   together, so generic selectors here would leak into the ring, card and editor. */
+
+html.settings-root {
+  --bg: #fafafa;
+  --fg: #1a1a1a;
+  --muted: #6b6b6b;
+  --line: #e2e2e2;
+  --accent: #e8742a;
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  html.settings-root {
+    --bg: #1c1c1c;
+    --fg: #f0f0f0;
+    --muted: #a0a0a0;
+    --line: #333;
+  }
+}
+
+html.settings-root body {
+  margin: 0;
+}
+
+.settings {
+  padding: 24px;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--fg);
+}
+
+.settings h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.settings h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+.settings .hint {
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+
+.settings .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings select,
+.settings input[type="text"] {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.settings input[type="text"] {
+  width: 230px;
+}
+
+.settings input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
+}
+
+.settings kbd {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: inherit;
+}
+
+.settings .status {
+  min-height: 18px;
+  color: var(--accent);
+}
+
+.settings .last p {
+  margin: 0;
+  word-break: break-all;
+}
+
+.settings .about {
+  margin: 8px 0 18px;
+}
+
+.settings .check {
+  font: inherit;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.settings .check:disabled {
+  opacity: 0.6;
+}

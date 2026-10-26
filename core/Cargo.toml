@@ -1,0 +1,46 @@
+[package]
+name = "shiftdrop-core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "ShiftDrop logic without Tauri: ring menu contents, geometry, file actions"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+anyhow = "1"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "tiff", "bmp", "gif", "avif", "rayon"] }
+tiff = "0.9"
+webp = { version = "0.3", default-features = false }
+flate2 = "1"
+jpeg-encoder = "0.6"
+rayon = "1"
+lopdf = { version = "0.34", default-features = false, features = ["nom_parser"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+kamadak-exif = "0.6"
+oxipng = { version = "9", default-features = false, features = ["parallel"] }
+
+[dev-dependencies]
+png = "0.17"
+
+[dependencies.windows]
+version = "0.58"
+features = [
+    "Data_Pdf",
+    "Foundation",
+    "Graphics_Imaging",
+    "Storage",
+    "Storage_Streams",
+    "Win32_Foundation",
+    "Win32_Graphics_Imaging",
+    "Win32_Media_MediaFoundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Memory",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+]
+
+# Image codecs are unusably slow unoptimised; optimise dependencies even in debug/test builds.
+[profile.dev.package."*"]
+opt-level = 3

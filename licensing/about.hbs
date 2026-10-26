@@ -1,0 +1,24 @@
+THIRD-PARTY SOFTWARE NOTICES
+============================
+
+File Beaver is built with the open-source components listed below. Each is used under the
+licence shown; the full licence texts follow.
+
+This software is based in part on the work of the Independent JPEG Group.
+
+Components under the Mozilla Public License 2.0 are used unmodified; their source code
+is available at https://crates.io/crates/<name> for the versions listed.
+
+{{#each overview}}
+- {{{name}}} ({{id}}): {{count}} component(s)
+{{/each}}
+
+{{#each licenses}}
+----------------------------------------------------------------------------------------
+{{{name}}} ({{id}})
+Used by: {{#each used_by}}{{crate.name}} {{crate.version}}{{#unless @last}}, {{/unless}}{{/each}}
+----------------------------------------------------------------------------------------
+
+{{{text}}}
+
+{{/each}}

@@ -18,6 +18,7 @@ lopdf = { version = "0.34", default-features = false, features = ["nom_parser"] 
 zip = { version = "2", default-features = false, features = ["deflate"] }
 kamadak-exif = "0.6"
 oxipng = { version = "9", default-features = false, features = ["parallel"] }
+log = "0.4"
 
 [dev-dependencies]
 png = "0.17"
@@ -36,9 +37,12 @@ features = [
     "Win32_Storage_FileSystem",
     "Win32_System_Com",
     "Win32_System_Com_StructuredStorage",
+    "Win32_System_Diagnostics_ToolHelp",
     "Win32_System_Memory",
     "Win32_System_ProcessStatus",
+    "Win32_System_Registry",
     "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
 ]
 
 # Image codecs are unusably slow unoptimised; optimise dependencies even in debug/test builds.

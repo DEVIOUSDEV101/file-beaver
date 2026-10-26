@@ -115,7 +115,7 @@ fn has_mft(category: GUID, subtype: GUID, output: bool) -> bool {
     }
 }
 
-/// Probes once which HEIC/AVIF codecs this PC has.
+/// Probes once which HEIC/AVIF codecs this PC has, and whether Word is installed.
 pub fn caps() -> Caps {
     static CAPS: OnceLock<Caps> = OnceLock::new();
     *CAPS.get_or_init(|| {
@@ -130,6 +130,8 @@ pub fn caps() -> Caps {
             heic_decode: heif_read && hevc_dec,
             heic_encode,
             avif_decode: heif_read && av1_dec,
+            // Registry only; never starts Word.
+            word: crate::word::installed(),
         }
     })
 }

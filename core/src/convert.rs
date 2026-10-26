@@ -1,6 +1,8 @@
 //! Convert: images and PDF pages to another format.
 //! - To an image format: one output per image / per PDF page.
 //! - To PDF or DOCX: everything dropped goes into one document, in order.
+//! - Word documents to PDF, and PDF to editable DOCX: each file through Microsoft Word
+//!   (`word.rs`). Without Word, PDF to DOCX puts each page in as a picture.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -17,6 +19,7 @@ use crate::formats::Format;
 use crate::naming::{self, OutputDir};
 use crate::pdf::{self, Page, PageImage};
 use crate::pool;
+use crate::word;
 
 /// One page of input: a whole image file, or one page of a PDF.
 struct Unit {
@@ -84,6 +87,11 @@ fn par_units<T: Send>(
 }
 
 pub fn run(paths: &[PathBuf], target: Format, out: &OutputDir, cancel: &AtomicBool, progress: &mut (dyn FnMut(Progress) + Send)) -> Outcome {
+    let all = |ok: fn(Format) -> bool| paths.iter().all(|p| Format::from_path(p).is_some_and(ok));
+    // Word documents to PDF, and PDF to editable DOCX, go through Microsoft Word.
+    if (target == Format::Pdf && all(Format::is_word)) || (target == Format::Docx && all(|f| f == Format::Pdf) && word::usable()) {
+        return with_word(paths, target, out, cancel, progress);
+    }
     let mut outcome = Outcome::default();
     let (units, errors) = match units(paths) {
         Ok(u) => u,
@@ -179,11 +187,48 @@ pub fn run(paths: &[PathBuf], target: Format, out: &OutputDir, cancel: &AtomicBo
             }
         }
     }
-    outcome.summary = match outcome.outputs.as_slice() {
+    outcome.summary = summary(&outcome.outputs);
+    // Without Word a PDF becomes pictures of its pages; say so rather than imply it's editable.
+    if target == Format::Docx && !outcome.outputs.is_empty() && paths.iter().any(|p| Format::from_path(p) == Some(Format::Pdf)) {
+        outcome.summary.push_str(", pages as pictures");
+    }
+    outcome
+}
+
+fn summary(outputs: &[PathBuf]) -> String {
+    match outputs {
         [] => "Nothing was converted".into(),
         [one] => format!("Saved {}", name(one)),
         many => format!("Saved {} files", many.len()),
-    };
+    }
+}
+
+/// One file at a time, each in its own Word, so one bad file can't spoil the rest.
+fn with_word(paths: &[PathBuf], target: Format, out: &OutputDir, cancel: &AtomicBool, progress: &mut (dyn FnMut(Progress) + Send)) -> Outcome {
+    let mut outcome = Outcome::default();
+    let n = paths.len();
+    for (i, p) in paths.iter().enumerate() {
+        if cancel.load(Ordering::SeqCst) {
+            return Outcome::cancelled();
+        }
+        let file = if n > 1 { format!(" ({} of {n})", i + 1) } else { String::new() };
+        let mut steps = 0.0;
+        let result = crate::formats::not_really(p).map_or(Ok(()), |why| Err(anyhow!(why))).and_then(|()| {
+            word::convert(p, target, cancel, &mut |stage| {
+                // Word gives no real progress; move a little for each step.
+                steps += 1.0;
+                progress(Progress { fraction: (i as f32 + steps / 4.0) / n as f32, detail: format!("{stage}{file}") });
+            })
+        });
+        match result.and_then(|bytes| naming::write_new(&naming::target_dir(p, out), &naming::stem(p), target.ext(), &bytes)) {
+            Ok(saved) => outcome.outputs.push(saved),
+            Err(_) if cancel.load(Ordering::SeqCst) => return Outcome::cancelled(),
+            // Word can't save here after all: PDFs still go to DOCX, as pictures.
+            Err(_) if target == Format::Docx && !word::usable() && outcome.outputs.is_empty() => return run(paths, target, out, cancel, progress),
+            Err(e) => outcome.errors.push(format!("{}: {e:#}", name(p))),
+        }
+    }
+    outcome.summary = summary(&outcome.outputs);
     outcome
 }
 

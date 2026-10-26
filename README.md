@@ -182,8 +182,13 @@ Add a setting to make the beaver bigger.
 <details>
 <summary><b>Can it convert Word documents to PDF?</b></summary>
 <br>
-Not yet; it's being built now. Today it opens images and PDFs. It can save a PDF as DOCX,
-with each page as a picture rather than editable text.
+Yes, if Microsoft Word is installed and activated on your PC. File Beaver has Word do the
+conversion in the background, so the PDF looks just like the document does in Word. DOCX,
+DOC, RTF and ODT files work. Without Word they're greyed out.
+<br><br>
+PDF to DOCX uses Word too, so you get text you can edit. Without Word, each page goes in as
+a picture, and the result card says so. Scanned PDFs have no text to recover, so their
+pages stay pictures either way.
 </details>
 
 <details>

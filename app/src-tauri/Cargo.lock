@@ -4258,6 +4258,7 @@ dependencies = [
  "image",
  "jpeg-encoder",
  "kamadak-exif",
+ "log",
  "lopdf",
  "oxipng",
  "rayon",

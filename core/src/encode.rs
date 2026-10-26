@@ -94,7 +94,7 @@ pub fn encode(img: &DynamicImage, fmt: Format, icc: Option<&[u8]>, quality: u8) 
             AvifEncoder::new_with_speed_quality(&mut out, 8, quality).write_image(img.to_rgba8().as_raw(), w, h, ExtendedColorType::Rgba8)?;
         }
         Format::Heic => out = wic::encode_heic(img)?,
-        Format::Gif | Format::Pdf | Format::Docx => return Err(anyhow!("{} isn't an image output", fmt.label())),
+        Format::Gif | Format::Pdf | Format::Docx | Format::Doc | Format::Rtf | Format::Odt => return Err(anyhow!("{} isn't an image output", fmt.label())),
     }
     Ok(out)
 }

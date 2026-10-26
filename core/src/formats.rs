@@ -14,6 +14,10 @@ pub enum Format {
     Gif,
     Pdf,
     Docx,
+    /// Older and other word-processor formats Word opens; read only, through Word.
+    Doc,
+    Rtf,
+    Odt,
 }
 
 impl Format {
@@ -30,6 +34,9 @@ impl Format {
             "gif" => Format::Gif,
             "pdf" => Format::Pdf,
             "docx" => Format::Docx,
+            "doc" => Format::Doc,
+            "rtf" => Format::Rtf,
+            "odt" => Format::Odt,
             _ => return None,
         })
     }
@@ -51,6 +58,9 @@ impl Format {
             Format::Gif => "gif",
             Format::Pdf => "pdf",
             Format::Docx => "docx",
+            Format::Doc => "doc",
+            Format::Rtf => "rtf",
+            Format::Odt => "odt",
         }
     }
 
@@ -63,7 +73,12 @@ impl Format {
     }
 
     pub fn is_image(self) -> bool {
-        !matches!(self, Format::Pdf | Format::Docx)
+        !matches!(self, Format::Pdf) && !self.is_word()
+    }
+
+    /// Documents Word opens (and File Beaver only reads through Word).
+    pub fn is_word(self) -> bool {
+        matches!(self, Format::Docx | Format::Doc | Format::Rtf | Format::Odt)
     }
 }
 
@@ -102,7 +117,18 @@ pub fn sniff(path: &Path) -> Option<Format> {
 /// A file whose name says it's an image but whose content isn't recognisable.
 pub fn not_really(path: &std::path::Path) -> Option<String> {
     let named = Format::from_path(path)?;
-    (named != Format::Pdf && sniff(path).is_none()).then(|| format!("this file is damaged or isn't really a {}", named.label()))
+    let ok = if named.is_word() { looks_like_word(path) } else { named == Format::Pdf || sniff(path).is_some() };
+    (!ok).then(|| format!("this file is damaged or isn't really a {}", named.label()))
+}
+
+/// A zip (DOCX, ODT), an old Word binary file (DOC) or RTF. Word itself decides the rest;
+/// this only catches files that can't be a document at all (empty, an image renamed .docx).
+pub fn looks_like_word(path: &Path) -> bool {
+    use std::io::Read;
+    let mut head = [0u8; 8];
+    let Ok(n) = std::fs::File::open(path).and_then(|mut f| f.read(&mut head)) else { return false };
+    let h = &head[..n];
+    h.starts_with(&[b'P', b'K', 3, 4]) || h.starts_with(&[0xD0, 0xCF, 0x11, 0xE0]) || h.starts_with(b"{\\rtf")
 }
 
 /// Content first, then the file name.
@@ -110,31 +136,34 @@ pub fn detect(path: &Path) -> Option<Format> {
     sniff(path).or_else(|| Format::from_path(path))
 }
 
-/// What this PC's codecs can do; HEIC and AVIF depend on Microsoft Store extensions.
+/// What this PC's codecs can do; HEIC and AVIF depend on Microsoft Store extensions,
+/// Word documents on Microsoft Word being installed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Caps {
     pub heic_decode: bool,
     pub heic_encode: bool,
     pub avif_decode: bool,
+    pub word: bool,
 }
 
 impl Caps {
     /// Everything available; for tests of menu logic.
-    pub const ALL: Caps = Caps { heic_decode: true, heic_encode: true, avif_decode: true };
+    pub const ALL: Caps = Caps { heic_decode: true, heic_encode: true, avif_decode: true, word: true };
 
     pub fn can_read(&self, f: Format) -> bool {
         match f {
             Format::Heic => self.heic_decode,
             Format::Avif => self.avif_decode,
-            Format::Docx => false,
+            f if f.is_word() => self.word,
             _ => true,
         }
     }
 
+    /// DOCX is always writable: through Word as editable text, otherwise as pictures.
     pub fn can_write(&self, f: Format) -> bool {
         match f {
             Format::Heic => self.heic_encode,
-            Format::Gif => false,
+            Format::Gif | Format::Doc | Format::Rtf | Format::Odt => false,
             _ => true,
         }
     }

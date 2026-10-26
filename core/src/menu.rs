@@ -57,7 +57,24 @@ const TOOLS: [(&str, &str, &str); 7] = [
 
 fn convert_page(formats: &[Option<Format>], caps: &Caps) -> Vec<Segment> {
     let Some(known) = formats.iter().copied().collect::<Option<Vec<Format>>>() else { return Vec::new() };
-    if known.is_empty() || known.iter().any(|f| !f.is_image() && *f != Format::Pdf) {
+    if known.is_empty() {
+        return Vec::new();
+    }
+    // Word documents only go to PDF (through Word); the rest of the ring shows greyed out.
+    if known.iter().all(|f| f.is_word()) {
+        let skip = known.iter().all(|f| *f == known[0]).then_some(known[0]);
+        return TARGETS
+            .iter()
+            .filter(|f| Some(**f) != skip)
+            .map(|f| Segment {
+                id: format!("convert:{}", f.id()),
+                label: f.label(),
+                icon: None,
+                enabled: *f == Format::Pdf && known.iter().all(|f| caps.can_read(*f)),
+            })
+            .collect();
+    }
+    if known.iter().any(|f| !f.is_image() && *f != Format::Pdf) {
         return Vec::new();
     }
     let readable = known.iter().all(|f| caps.can_read(*f));
@@ -109,7 +126,9 @@ pub fn build(paths: &[String], caps: &Caps) -> Menu {
     let convert = convert_page(&formats, caps);
     let tools = tools_page(&formats, caps);
     let images = formats.iter().all(|f| f.is_some_and(|f| f.is_image()));
-    let start_page = if convert.iter().any(|s| s.enabled) && !(images && tools.iter().any(|s| s.enabled)) {
+    // Word documents have no tools, so they open on Convert even when Word is missing.
+    let word = !formats.is_empty() && formats.iter().all(|f| f.is_some_and(|f| f.is_word()));
+    let start_page = if word || (convert.iter().any(|s| s.enabled) && !(images && tools.iter().any(|s| s.enabled))) {
         CONVERT_PAGE
     } else {
         TOOLS_PAGE
@@ -198,7 +217,7 @@ mod tests {
 
     #[test]
     fn missing_heic_codecs_grey_out_heic() {
-        let no_heic = Caps { heic_decode: false, heic_encode: false, avif_decode: true };
+        let no_heic = Caps { heic_decode: false, heic_encode: false, avif_decode: true, word: true };
         let m = build(&["a.png".into()], &no_heic);
         let heic = m.pages[CONVERT_PAGE].iter().find(|s| s.id == "convert:heic").unwrap();
         assert!(!heic.enabled);
@@ -218,6 +237,40 @@ mod tests {
         std::fs::write(&p, vec![0u8; 3 * 1024]).unwrap();
         assert_eq!(build(&[p.to_string_lossy().into_owned()], &Caps::ALL).title, "3.0 KB");
         let _ = std::fs::remove_file(p);
+    }
+
+    #[test]
+    fn word_documents_open_on_convert_with_only_pdf() {
+        for name in ["Report.docx", "old.DOC", "notes.rtf", "draft.odt"] {
+            let m = build(&[name.into()], &Caps::ALL);
+            assert_eq!(m.start_page, CONVERT_PAGE, "{name}");
+            assert_eq!(enabled(&m.pages[CONVERT_PAGE]), ["convert:pdf"], "{name}");
+            assert!(enabled(&m.pages[TOOLS_PAGE]).is_empty(), "{name}");
+        }
+        // A DOCX doesn't offer DOCX; the other Word formats show it greyed out.
+        assert!(!ids(&build(&["a.docx".into()], &Caps::ALL).pages[CONVERT_PAGE]).contains(&"convert:docx"));
+        assert!(ids(&build(&["a.rtf".into()], &Caps::ALL).pages[CONVERT_PAGE]).contains(&"convert:docx"));
+        // A batch of Word files converts each one.
+        let m = build(&["a.docx".into(), "b.doc".into()], &Caps::ALL);
+        assert_eq!(enabled(&m.pages[CONVERT_PAGE]), ["convert:pdf"]);
+    }
+
+    #[test]
+    fn missing_word_greys_out_word_documents_but_not_pdf_to_docx() {
+        let no_word = Caps { word: false, ..Caps::ALL };
+        let m = build(&["Report.docx".into()], &no_word);
+        assert_eq!(m.start_page, CONVERT_PAGE);
+        assert!(enabled(&m.pages[CONVERT_PAGE]).is_empty());
+        // PDF to DOCX still works without Word (pages as pictures).
+        let m = build(&["a.pdf".into()], &no_word);
+        assert!(enabled(&m.pages[CONVERT_PAGE]).contains(&"convert:docx"));
+    }
+
+    #[test]
+    fn word_mixed_with_images_offers_nothing() {
+        let m = build(&["a.docx".into(), "b.png".into()], &Caps::ALL);
+        assert!(m.pages[CONVERT_PAGE].is_empty());
+        assert!(enabled(&m.pages[TOOLS_PAGE]).is_empty());
     }
 
     #[test]

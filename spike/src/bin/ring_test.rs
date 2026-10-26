@@ -3,7 +3,7 @@
 //! -> tap Shift (Tools ring) -> hover Crop -> screenshot -> drop. Then a Shift-drag that is
 //! not a file drag, which must auto-hide.
 //!
-//! usage: ring_test <file> <out_dir> <drop: crop|png|hub>
+//! usage: ring_test <file> <out_dir> <drop: crop|png|last|hub|compress|metadata>
 
 use std::path::PathBuf;
 use std::thread::sleep;
@@ -221,6 +221,16 @@ fn main() -> Result<()> {
                     glide(crop, png);
                     sleep(Duration::from_millis(300));
                     png
+                }
+                // Last of 8 Convert petals: PDF for a Word file, DOCX for a PDF.
+                "last" => {
+                    tap_shift(); // back to Convert
+                    sleep(Duration::from_millis(300));
+                    let t = polar(center, r_hover, 315.0);
+                    glide(crop, t);
+                    sleep(Duration::from_millis(500));
+                    screenshot(&out2.join("1b-convert-hover-last.png"), center.0, center.1, half);
+                    t
                 }
                 "hub" => {
                     glide(crop, center);

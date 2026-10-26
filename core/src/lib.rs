@@ -15,3 +15,4 @@ pub mod pdf;
 pub mod pdf_edit;
 pub mod pool;
 pub mod wic;
+pub mod word;

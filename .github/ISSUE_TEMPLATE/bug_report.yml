@@ -1,0 +1,41 @@
+name: Something isn't working
+description: Report a bug in File Beaver
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time. The more exact you are, the faster it gets fixed.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: I dragged a PDF onto the beaver and chose JPG, but…
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: Kind of file
+      description: For example "a 40-page PDF" or "a HEIC photo from an iPhone". Please don't attach private files.
+  - type: input
+    id: version
+    attributes:
+      label: File Beaver version
+      description: Shown in Settings (click the tray icon).
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: windows
+    attributes:
+      label: Windows version
+      options: [Windows 11, Windows 10, Not sure]
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (optional)
+      description: The last lines of `%LOCALAPPDATA%\app.filebeaver.desktop\logs\shiftdrop.log`. Check it for anything private before pasting.
+      render: text

@@ -1,0 +1,16 @@
+name: I'd like it to do something
+description: Suggest a new action, format or improvement
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like File Beaver to do?
+      placeholder: Convert Word documents to PDF.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: When would you use it?
+      description: A real example helps decide what to build first.

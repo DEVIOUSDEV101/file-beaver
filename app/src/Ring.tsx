@@ -152,8 +152,8 @@ export default function Ring() {
           <circle cx={C} cy={C} r={HUB - 1} />
         </clipPath>
         <linearGradient id="hot" gradientUnits="userSpaceOnUse" x1="0" y1={C - R} x2="0" y2={C + R}>
-          <stop offset="0" stopColor="#f6763b" />
-          <stop offset="1" stopColor="#e0451a" />
+          <stop offset="0" stopColor="#c8f272" />
+          <stop offset="1" stopColor="#8fd42a" />
         </linearGradient>
       </defs>
 

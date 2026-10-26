@@ -155,7 +155,8 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&enabled_item, &settings_item, &sep, &quit_item])?;
 
             TrayIconBuilder::with_id("tray")
-                .icon(app.default_window_icon().unwrap().clone())
+                // Flat beaver: the glass app icon turns to mush at tray size.
+                .icon(tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?)
                 .tooltip("File Beaver: drag a file and tap Shift")
                 .menu(&menu)
                 .show_menu_on_left_click(false)

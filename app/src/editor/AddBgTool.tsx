@@ -3,6 +3,8 @@ import { Chips, Paint, Section, Slider, Stage } from "./ui";
 
 const SOLIDS = ["#ffffff", "#111111", "#f4ede4", "#ff6b35", "#ffd166", "#06d6a0", "#118ab2", "#ef476f", "#8338ec"];
 const GRADIENTS: string[][] = [
+  // First = default: File Beaver's lime fading into pond green.
+  ["#c8f272", "#2f6b3f", "#0e3b24"],
   ["#ff9a8b", "#ff6a88", "#ff99ac"],
   ["#f6d365", "#fda085"],
   ["#fbc2eb", "#a6c1ee"],

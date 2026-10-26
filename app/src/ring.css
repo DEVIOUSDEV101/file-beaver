@@ -1,4 +1,6 @@
-/* The radial menu. Colours and proportions follow the reference; Phase 8 restyles it. */
+/* The radial menu, File Beaver style: frosted-glass petals, a pond-green hub with a lime
+   edge, and lime for the petal under the cursor. Geometry lives in Ring.tsx and must match
+   the hit-testing in trigger.rs / core geometry.rs. */
 
 html.ring-root,
 html.ring-root body,
@@ -11,8 +13,9 @@ html.ring-root #root {
 }
 
 .ring {
-  --petal: #ffe3c8;
-  --ink: #5b4433;
+  --pond: #0e3b24;
+  --frost: #f1f6ee;
+  --lime: #a6e43a;
   display: block;
   width: 100vw;
   height: 100vh;
@@ -20,14 +23,14 @@ html.ring-root #root {
   cursor: default;
   font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   transform-origin: 50% 50%;
-  filter: drop-shadow(0 6px 14px rgba(70, 25, 0, 0.3));
-  animation: ring-in 140ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+  filter: drop-shadow(0 8px 18px rgba(8, 40, 20, 0.35));
+  animation: ring-in 150ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
 }
 
 @keyframes ring-in {
   from {
     opacity: 0;
-    transform: scale(0.86);
+    transform: scale(0.86) rotate(-6deg);
   }
   to {
     opacity: 1;
@@ -35,18 +38,26 @@ html.ring-root #root {
   }
 }
 
-/* Frosted glass: the captured screen patch behind the ring, blurred and warmed. */
+@media (prefers-reduced-motion: reduce) {
+  .ring,
+  .petals,
+  .petal.chosen {
+    animation: none;
+  }
+}
+
+/* Frosted glass: the captured screen patch behind the ring, blurred and cooled. */
 .backdrop {
-  filter: blur(10px) saturate(1.6) brightness(1.06);
+  filter: blur(10px) saturate(1.3) brightness(1.08);
 }
 
 .tint {
-  fill: rgba(255, 238, 222, 0.3);
+  fill: rgba(241, 246, 238, 0.42);
 }
 
 .rim {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.7);
+  stroke: rgba(166, 228, 58, 0.85);
   stroke-width: 1.5;
 }
 
@@ -68,7 +79,7 @@ html.ring-root #root {
 }
 
 .petal {
-  opacity: 0.92;
+  opacity: 0.88;
   transform-box: view-box;
   transform-origin: 192px 192px;
   transition:
@@ -79,23 +90,23 @@ html.ring-root #root {
 /* The petal shape only (not icon paths): opaque fill + same-colour round stroke; opacity
    lives on the group so they do not double up. */
 .petal > path {
-  fill: var(--petal);
-  stroke: var(--petal);
+  fill: var(--frost);
+  stroke: var(--frost);
   stroke-width: 24;
   stroke-linejoin: round;
 }
 
 .petals.loading .petal {
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .petal.off {
-  opacity: 0.38;
+  opacity: 0.32;
 }
 
 .petal.hot {
   opacity: 1;
-  transform: scale(1.035);
+  transform: scale(1.04);
 }
 
 .petal.hot > path {
@@ -109,46 +120,48 @@ html.ring-root #root {
 
 @keyframes chosen {
   50% {
-    transform: scale(1.08);
+    transform: scale(1.09);
   }
 }
 
 .label {
-  fill: var(--ink);
-  font-weight: 600;
-  text-transform: uppercase;
+  fill: var(--pond);
+  font-weight: 650;
 }
 
 .label.tool {
-  font-size: 10.5px;
-  letter-spacing: 0.07em;
+  font-size: 12px;
+  letter-spacing: 0.01em;
 }
 
 .label.format {
   font-size: 15px;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
 }
 
 .icon {
-  color: var(--ink);
+  color: var(--pond);
 }
 
+/* Pond-green ink on lime: white on lime fails contrast. Icons are line drawings, so they
+   only take `color` (a fill would turn them into solid blobs). */
 .petal.hot .label {
-  fill: #fff;
+  fill: var(--pond);
 }
 
 .petal.hot .icon {
-  color: #fff;
+  color: var(--pond);
 }
 
+/* Near-opaque so warm wallpapers don't turn it muddy. */
 .hub {
-  fill: rgba(90, 45, 15, 0.2);
-  stroke: rgba(255, 255, 255, 0.4);
-  stroke-width: 1;
+  fill: rgba(14, 59, 36, 0.94);
+  stroke: rgba(166, 228, 58, 0.9);
+  stroke-width: 2;
 }
 
 .thumb {
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
 }
 
 .pill-wrap {
@@ -166,14 +179,15 @@ html.ring-root #root {
   text-overflow: ellipsis;
   padding: 5px 13px;
   border-radius: 999px;
-  background: rgba(255, 240, 226, 0.95);
-  color: var(--ink);
-  font-size: 11px;
+  background: rgba(241, 246, 238, 0.96);
+  color: var(--pond);
+  font-size: 11.5px;
   font-weight: 600;
-  box-shadow: 0 2px 6px rgba(70, 25, 0, 0.22);
+  box-shadow: 0 2px 6px rgba(8, 40, 20, 0.3);
 }
 
+/* While hovering a petal, the pill names the action in lime. */
 .pill.action {
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+  background: var(--lime);
+  font-weight: 700;
 }

@@ -1,4 +1,4 @@
-/* Editor window. Warm palette matching the ring and card; Phase 8 restyles everything. */
+/* Editor window in File Beaver's frost / pond / lime, with a pond-green dark mode. */
 
 html.editor-root,
 html.editor-root body,
@@ -9,14 +9,16 @@ html.editor-root #root {
 }
 
 .editor {
-  --bg: #fbf6f1;
+  --bg: #f4f8f1;
   --panel: #ffffff;
-  --stage: #ebe3da;
-  --ink: #3d2c20;
-  --muted: #8a7262;
-  --line: #eadfd4;
-  --accent: #e8571f;
-  --accent-ink: #ffffff;
+  --stage: #e3ebdf;
+  --ink: #13261b;
+  --muted: #557062;
+  --line: #dbe6d6;
+  --accent: #a6e43a;
+  --accent-ink: #0e3b24;
+  /* Lime text on white is unreadable; links use moss instead. */
+  --link: #2f6b3f;
   display: grid;
   grid-template-rows: auto 1fr auto;
   height: 100vh;
@@ -29,12 +31,13 @@ html.editor-root #root {
 
 @media (prefers-color-scheme: dark) {
   .editor {
-    --bg: #211b17;
-    --panel: #2a231e;
-    --stage: #15110e;
-    --ink: #f3e9df;
-    --muted: #b09a8a;
-    --line: #3a302a;
+    --bg: #0f1e15;
+    --panel: #142a1d;
+    --stage: #0a140e;
+    --ink: #e8f2e3;
+    --muted: #9cb5a5;
+    --line: #23402e;
+    --link: #a6e43a;
   }
 }
 
@@ -82,9 +85,9 @@ html.editor-root #root {
 
 .stage-content {
   position: relative;
-  box-shadow: 0 4px 18px rgba(40, 20, 5, 0.18);
+  box-shadow: 0 4px 18px rgba(8, 40, 20, 0.18);
   background:
-    repeating-conic-gradient(#d9d1c8 0% 25%, #f2ece6 0% 50%) 0 0 / 16px 16px;
+    repeating-conic-gradient(#d5dfd0 0% 25%, #eef3ea 0% 50%) 0 0 / 16px 16px;
 }
 
 .stage-content canvas {
@@ -110,11 +113,9 @@ html.editor-root #root {
 
 .section h3 {
   margin: 0 0 9px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink);
 }
 
 .row {
@@ -243,7 +244,7 @@ html.editor-root #root {
   padding: 0;
   border: none;
   background: none;
-  color: var(--accent);
+  color: var(--link);
   font: inherit;
   cursor: pointer;
 }
@@ -316,7 +317,7 @@ html.editor-root #root {
 
 .shade {
   position: absolute;
-  box-shadow: 0 0 0 9999px rgba(20, 10, 0, 0.55);
+  box-shadow: 0 0 0 9999px rgba(5, 25, 14, 0.55);
 }
 
 .crop-box {
@@ -387,7 +388,7 @@ html.editor-root #root {
 .selection {
   position: absolute;
   box-sizing: border-box;
-  border: 2px dashed var(--accent);
+  border: 2px dashed var(--link);
   pointer-events: none;
 }
 
@@ -448,4 +449,12 @@ html.editor-root #root {
 .primary:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* Visible keyboard focus everywhere in the editor. */
+.editor button:focus-visible,
+.editor input:focus-visible,
+.editor .swatch:focus-within {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
 }

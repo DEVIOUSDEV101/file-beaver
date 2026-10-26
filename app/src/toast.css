@@ -1,4 +1,4 @@
-/* Progress card shown beside the drop point. Matches the ring's look; Phase 8 restyles both.
+/* Progress card shown beside the drop point, in File Beaver's frost / pond / lime.
    Scoped to html.toast-root because all windows share one CSS bundle. */
 
 html.toast-root,
@@ -12,16 +12,17 @@ html.toast-root #root {
 }
 
 html.toast-root .card {
-  --ink: #4a3628;
-  --muted: #8a6c58;
-  --accent: #e8571f;
+  --ink: #13261b;
+  --muted: #557062;
+  --pond: #0e3b24;
+  --accent: #a6e43a;
   box-sizing: border-box;
   margin: 8px;
   padding: 12px 14px 13px;
   border-radius: 14px;
-  background: rgba(255, 240, 226, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 6px 18px rgba(70, 25, 0, 0.25);
+  background: rgba(241, 246, 238, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 22px rgba(8, 40, 20, 0.28);
   color: var(--ink);
   font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
@@ -52,21 +53,24 @@ html.toast-root .badge {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  color: #fff;
+  color: var(--pond);
   background: var(--accent);
   flex: none;
 }
 
 html.toast-root .done .badge {
-  background: #2f9e5b;
+  background: #2f6b3f;
+  color: #f1f6ee;
 }
 
 html.toast-root .error .badge {
   background: #c8372d;
+  color: #fff;
 }
 
 html.toast-root .info .badge {
-  background: #8a6c58;
+  background: #557062;
+  color: #f1f6ee;
 }
 
 html.toast-root .spin {
@@ -101,7 +105,7 @@ html.toast-root .close {
 }
 
 html.toast-root .close:hover {
-  background: rgba(74, 54, 40, 0.1);
+  background: rgba(19, 38, 27, 0.1);
   color: var(--ink);
 }
 
@@ -129,7 +133,7 @@ html.toast-root .bar {
   height: 5px;
   margin: 10px 0 0 30px;
   border-radius: 3px;
-  background: rgba(74, 54, 40, 0.12);
+  background: rgba(19, 38, 27, 0.12);
   overflow: hidden;
 }
 
@@ -156,11 +160,17 @@ html.toast-root .reveal {
   border: none;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--pond);
   font: inherit;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 650;
   cursor: pointer;
+}
+
+html.toast-root .reveal:focus-visible,
+html.toast-root .close:focus-visible {
+  outline: 2px solid var(--pond);
+  outline-offset: 2px;
 }
 
 html.toast-root .reveal:hover {

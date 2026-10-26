@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>File Beaver: drag a file, tap Shift</title>
+<meta name="description" content="File Beaver adds a ring of quick actions to file drags on Windows. Convert, compress, crop, annotate and redact without opening an app. Free and open source.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pond: #0e3b24;
+    --moss: #2f6b3f;
+    --lime: #a6e43a;
+    --frost: #f1f6ee;
+    --ink: #13261b;
+    --muted: #4f6858;
+    --line: #d6e2d0;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--frost);
+    color: var(--ink);
+    font-family: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    font-optical-sizing: auto;
+    font-size: 18px;
+    line-height: 1.55;
+  }
+
+  a { color: var(--moss); text-underline-offset: 3px; }
+  a:hover { color: var(--pond); }
+  :focus-visible { outline: 3px solid var(--moss); outline-offset: 3px; border-radius: 6px; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- top bar ---------- */
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 0;
+  }
+  .wordmark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 750;
+    font-size: 21px;
+    letter-spacing: -0.01em;
+  }
+  .wordmark img { width: 34px; height: 34px; }
+
+  /* ---------- hero ---------- */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 48px;
+    align-items: center;
+    padding: 24px 0 72px;
+  }
+  .hero-logo { width: 132px; height: auto; margin-bottom: 8px; }
+  h1 {
+    margin: 0 0 20px;
+    font-size: clamp(48px, 7vw, 88px);
+    font-weight: 800;
+    font-stretch: 78%;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    color: var(--pond);
+  }
+  h1 span { display: block; }
+  .lede { max-width: 30em; margin: 0 0 28px; color: var(--muted); font-size: 19px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; }
+  .btn {
+    display: inline-block;
+    padding: 14px 24px;
+    border-radius: 999px;
+    background: var(--lime);
+    color: var(--pond);
+    font-weight: 750;
+    text-decoration: none;
+    box-shadow: 0 2px 0 var(--moss);
+  }
+  .btn:hover { color: var(--pond); filter: brightness(1.05); }
+  .btn:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--moss); }
+  .fine { margin: 14px 0 0; font-size: 15px; color: var(--muted); }
+
+  /* ---------- the live demo ---------- */
+  .demo {
+    position: relative;
+    aspect-ratio: 4 / 3.1;
+    border-radius: 22px;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 85% 10%, #3f8f4f 0%, transparent 55%),
+      radial-gradient(90% 80% at 10% 100%, #6fbf3a 0%, transparent 60%),
+      linear-gradient(160deg, #1d5c2e, #0b2914);
+    box-shadow: 0 30px 60px -30px rgba(8, 40, 20, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    touch-action: none;
+    user-select: none;
+    /* Lets the ring size itself from the demo's height as well as its width. */
+    container-type: size;
+  }
+  .file {
+    position: absolute;
+    left: 14%;
+    top: 22%;
+    width: 92px;
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 8px 6px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #f1f6ee;
+    font: inherit;
+    font-size: 13px;
+    cursor: grab;
+  }
+  .file:hover, .file.dragging { background: rgba(241, 246, 238, 0.14); }
+  .file.dragging { cursor: grabbing; opacity: 0.9; z-index: 3; }
+  .thumb {
+    width: 64px;
+    height: 48px;
+    border-radius: 4px;
+    background:
+      linear-gradient(180deg, transparent 55%, rgba(14, 59, 36, 0.55) 56%),
+      radial-gradient(circle at 70% 35%, #fff6c8 0 9px, transparent 10px),
+      linear-gradient(180deg, #8ad2ff, #ffd59e);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 2px #fff;
+  }
+  .hint {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    z-index: 3;
+    margin: 0; /* it's a <p>: drop the default margin or it slides onto the ring */
+    transform: translateX(-50%);
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(241, 246, 238, 0.95);
+    color: var(--pond);
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  /* While the ring is open the hint moves to the top so it never covers the ring. */
+  .hint.top { top: 16px; bottom: auto; }
+  kbd {
+    display: inline-block;
+    padding: 0 7px;
+    border-radius: 6px;
+    background: var(--pond);
+    color: var(--lime);
+    font: inherit;
+    font-weight: 750;
+    font-size: 0.92em;
+  }
+
+  .ring {
+    position: absolute;
+    /* Leaves a strip at the top for the hint. */
+    width: min(384px, 86cqw, calc(100cqh - 112px));
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 10px 22px rgba(4, 25, 12, 0.5));
+    animation: ring-in 150ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+    z-index: 2;
+  }
+  .ring[hidden] { display: none; }
+  @keyframes ring-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.86) rotate(-6deg); } }
+  .ring .disc { fill: rgba(241, 246, 238, 0.22); stroke: rgba(166, 228, 58, 0.85); stroke-width: 1.5; }
+  .ring .petal { cursor: pointer; opacity: 0.92; transform-box: view-box; transform-origin: 192px 192px; transition: transform 90ms ease-out; }
+  .ring .petal path { fill: #f1f6ee; stroke: #f1f6ee; stroke-width: 24; stroke-linejoin: round; }
+  .ring .petal text { fill: var(--pond); font-weight: 650; font-size: 13px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .ring .petal.format text { font-size: 15px; letter-spacing: 0.02em; }
+  .ring .petal.hot, .ring .petal:focus-visible { opacity: 1; transform: scale(1.04); outline: none; }
+  .ring .petal.hot path, .ring .petal:focus-visible path { fill: url(#hot); stroke: url(#hot); }
+  .ring .hub { fill: rgba(14, 59, 36, 0.94); stroke: rgba(166, 228, 58, 0.9); stroke-width: 2; cursor: pointer; }
+  .ring .hub-label { fill: #f1f6ee; font-size: 12px; font-weight: 600; text-anchor: middle; pointer-events: none; }
+
+  .toast {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    max-width: 290px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(241, 246, 238, 0.97);
+    box-shadow: 0 10px 24px rgba(4, 25, 12, 0.35);
+    font-size: 15px;
+    z-index: 4;
+  }
+  .toast[hidden] { display: none; }
+  .toast strong { display: block; color: var(--pond); }
+  .toast span { color: var(--muted); font-size: 14px; }
+
+  /* ---------- sections ---------- */
+  section.band { padding: 72px 0; border-top: 1px solid var(--line); }
+  h2 {
+    margin: 0 0 28px;
+    font-size: clamp(30px, 4vw, 42px);
+    font-weight: 780;
+    font-stretch: 85%;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: var(--pond);
+  }
+  .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; }
+  h3 { margin: 0 0 6px; font-size: 21px; font-weight: 720; color: var(--pond); }
+  .formats { margin: 8px 0 0; font-size: 22px; font-weight: 650; font-stretch: 88%; letter-spacing: 0.01em; color: var(--ink); }
+  .tools { margin: 10px 0 0; padding: 0; list-style: none; }
+  .tools li { padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .tools li b { color: var(--pond); }
+  .col p { margin: 0; color: var(--muted); max-width: 34em; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  .steps li { counter-increment: step; }
+  .steps li::before {
+    content: counter(step);
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 14px;
+    border-radius: 50%;
+    background: var(--pond);
+    color: var(--lime);
+    font-weight: 800;
+    font-size: 20px;
+  }
+  .steps p { margin: 0; color: var(--muted); }
+
+  .private { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 48px; align-items: start; }
+  .private > p { margin: 0; font-size: 20px; max-width: 30em; }
+  .facts { margin: 0; padding: 0; list-style: none; }
+  .facts li { padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+  .facts li b { color: var(--ink); }
+
+  footer { padding: 40px 0 56px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+  footer p { margin: 0 0 6px; max-width: 70em; }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; gap: 32px; padding-bottom: 56px; }
+    .two, .private { grid-template-columns: 1fr; gap: 28px; }
+    .steps { grid-template-columns: 1fr; gap: 22px; }
+    .demo { aspect-ratio: 4 / 4.2; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ring { animation: none; }
+    .ring .petal { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="wordmark" href="#"><img src="favicon.svg" alt="">File Beaver</a>
+    <a href="https://github.com/DEVIOUSDEV101/file-beaver">Source code</a>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <img class="hero-logo" src="beaver.webp" alt="File Beaver mascot: a glass beaver holding a lime" width="132" height="132">
+        <h1><span>Drag a file.</span><span>Tap Shift.</span><span>Done.</span></h1>
+        <p class="lede">File Beaver puts a ring of quick actions under any file you drag on Windows. Convert, compress, crop, annotate or redact it without opening another app.</p>
+        <div class="actions">
+          <a class="btn" href="https://github.com/DEVIOUSDEV101/file-beaver/releases/latest">Download for Windows</a>
+          <a href="https://github.com/DEVIOUSDEV101/file-beaver">See how it's built</a>
+        </div>
+        <p class="fine">Free and open source. Windows 10 and 11, 64-bit. About 5 MB.</p>
+      </div>
+
+      <div class="demo" id="demo" aria-label="Interactive demo of the File Beaver ring">
+        <button class="file" id="file" type="button" aria-describedby="hint">
+          <span class="thumb" aria-hidden="true"></span>
+          Holiday.jpg
+        </button>
+        <svg class="ring" id="ring" viewBox="0 0 384 384" hidden role="menu" aria-label="File Beaver actions">
+          <defs>
+            <linearGradient id="hot" gradientUnits="userSpaceOnUse" x1="0" y1="12" x2="0" y2="372">
+              <stop offset="0" stop-color="#c8f272"/>
+              <stop offset="1" stop-color="#8fd42a"/>
+            </linearGradient>
+          </defs>
+          <circle class="disc" cx="192" cy="192" r="179"/>
+          <g id="petals"></g>
+          <circle class="hub" id="hub" cx="192" cy="192" r="61"/>
+          <text class="hub-label" id="hubLabel" x="192" y="196">Holiday.jpg</text>
+        </svg>
+        <div class="toast" id="toast" role="status" hidden></div>
+        <p class="hint" id="hint">Drag the photo, then tap <kbd>Shift</kbd></p>
+      </div>
+    </div>
+
+    <section class="band" aria-labelledby="whats">
+      <h2 id="whats">What's in the ring</h2>
+      <div class="two">
+        <div class="col">
+          <h3>Convert</h3>
+          <p>Drop a photo or PDF on a format and a copy appears next to it.</p>
+          <p class="formats">JPG, PNG, WEBP, HEIC, TIFF, AVIF, BMP, PDF, DOCX</p>
+        </div>
+        <div class="col">
+          <h3>Tools</h3>
+          <p>Tap Shift again while dragging to switch to tools.</p>
+          <ul class="tools">
+            <li><b>Compress</b> shrinks photos and PDFs</li>
+            <li><b>Metadata</b> strips camera details and GPS location</li>
+            <li><b>Crop</b>, <b>Edit</b> and <b>Add BG</b> open a quick editor</li>
+            <li><b>Annotate</b> adds arrows, boxes, text and numbered steps</li>
+            <li><b>Redact</b> blacks out or pixelates anything private</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" aria-labelledby="how">
+      <h2 id="how">How it works</h2>
+      <ol class="steps">
+        <li><h3>Drag any file</h3><p>From File Explorer, the desktop or your browser's downloads.</p></li>
+        <li><h3>Tap Shift</h3><p>The ring opens under your cursor. Tap again for tools.</p></li>
+        <li><h3>Drop on an action</h3><p>The result is saved next to the original. The original never changes.</p></li>
+      </ol>
+    </section>
+
+    <section class="band" aria-labelledby="privacy">
+      <h2 id="privacy">Your files stay on your PC</h2>
+      <div class="private">
+        <p>Everything happens on your computer. There's no account, no upload and no tracking. File Beaver only goes online to check for updates.</p>
+        <ul class="facts">
+          <li><b>Open source.</b> Every line is on GitHub under the MIT licence.</li>
+          <li><b>Signed updates.</b> It only installs updates signed by the project, so a tampered download is refused.</li>
+          <li><b>No admin needed.</b> It installs for your account and removes itself cleanly.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>HEIC needs Microsoft's free HEIF extension and the HEVC Video Extensions from the Microsoft Store. Without them, HEIC is greyed out.</p>
+    <p>File Beaver is an independent project and isn't affiliated with any other file tool. <a href="https://github.com/DEVIOUSDEV101/file-beaver/blob/main/THIRD_PARTY_NOTICES.txt">Third-party licences</a>.</p>
+  </footer>
+</div>
+
+<script>
+// The demo ring: same proportions as the app (app/src/Ring.tsx). Dragging the photo and
+// tapping Shift opens it; tapping Shift again switches pages. On touch screens, tap the
+// photo to open it and tap the centre to switch pages.
+(() => {
+  const PAGES = [
+    { name: "Convert", items: ["PNG", "WEBP", "HEIC", "TIFF", "AVIF", "BMP", "PDF", "DOCX"], format: true },
+    { name: "Tools", items: ["Compress", "Metadata", "Edit", "Annotate", "Add BG", "Crop", "Redact"], format: false },
+  ];
+  const RESULT = {
+    PNG: ["Converted to PNG", "Saved Holiday.png"], WEBP: ["Converted to WEBP", "Saved Holiday.webp"],
+    HEIC: ["Converted to HEIC", "Saved Holiday.heic"], TIFF: ["Converted to TIFF", "Saved Holiday.tiff"],
+    AVIF: ["Converted to AVIF", "Saved Holiday.avif"], BMP: ["Converted to BMP", "Saved Holiday.bmp"],
+    PDF: ["Converted to PDF", "Saved Holiday.pdf"], DOCX: ["Converted to DOCX", "Saved Holiday.docx"],
+    Compress: ["Compressed", "4.6 MB to 1.6 MB, saved Holiday Compressed.jpg"],
+    Metadata: ["Metadata removed", "Removed EXIF, including GPS location"],
+    Edit: ["Edit opens", "In the app, an editor opens for rotate, resize and colour"],
+    Annotate: ["Annotate opens", "In the app, draw arrows, boxes and text"],
+    "Add BG": ["Add BG opens", "In the app, pick a background, padding and shadow"],
+    Crop: ["Crop opens", "In the app, drag the frame and save"],
+    Redact: ["Redact opens", "In the app, cover anything private"],
+  };
+  const C = 192, R = 180, IN = 0.4 * R, OUT = 0.93 * R, HUB = 0.34 * R, CORNER = 12, GAP = 7;
+  const demo = document.getElementById("demo"), file = document.getElementById("file");
+  const ring = document.getElementById("ring"), petals = document.getElementById("petals");
+  const hub = document.getElementById("hub"), hubLabel = document.getElementById("hubLabel");
+  const toast = document.getElementById("toast"), hint = document.getElementById("hint");
+  let page = 0, hot = -1, dragging = false, offset = [0, 0], toastTimer;
+  const touch = matchMedia("(hover: none)").matches;
+  // Short enough to fit a phone-width demo on one line.
+  const HINT_IDLE = touch ? "Tap the photo to open the ring" : "Drag the photo, then tap <kbd>Shift</kbd>";
+  const HINT_OPEN = touch ? "Tap the centre for tools" : "Tap <kbd>Shift</kbd> again for tools";
+  // SVG elements have no .hidden property (HTML-only), so use the attribute itself.
+  const isOpen = () => !ring.hasAttribute("hidden");
+
+  const pt = (r, a) => `${(C + r * Math.sin(a)).toFixed(2)} ${(C - r * Math.cos(a)).toFixed(2)}`;
+  function petalPath(i, n) {
+    const mid = (i * 2 * Math.PI) / n, half = Math.PI / n, inset = GAP / 2 + CORNER;
+    const ri = IN + CORNER, ro = OUT - CORNER, ai = Math.asin(inset / ri), ao = Math.asin(inset / ro);
+    return `M ${pt(ri, mid - half + ai)} L ${pt(ro, mid - half + ao)} A ${ro} ${ro} 0 0 1 ${pt(ro, mid + half - ao)} L ${pt(ri, mid + half - ai)} A ${ri} ${ri} 0 0 0 ${pt(ri, mid - half + ai)} Z`;
+  }
+
+  function draw() {
+    const p = PAGES[page], n = p.items.length;
+    petals.innerHTML = p.items.map((label, i) => {
+      const a = (i * 2 * Math.PI) / n, r = (IN + OUT) / 2;
+      return `<g class="petal${p.format ? " format" : ""}" data-i="${i}" role="menuitem" tabindex="-1" aria-label="${label}">
+        <path d="${petalPath(i, n)}"/><text x="${C + r * Math.sin(a)}" y="${C - r * Math.cos(a)}">${label}</text></g>`;
+    }).join("");
+    setHot(-1);
+  }
+
+  function setHot(i) {
+    hot = i;
+    petals.querySelectorAll(".petal").forEach((g, k) => g.classList.toggle("hot", k === i));
+    hubLabel.textContent = i >= 0 ? PAGES[page].items[i] : "Holiday.jpg";
+  }
+
+  // Moves keyboard focus to petal i and highlights it (focus events alone are unreliable
+  // when the page isn't the focused window).
+  function focusPetal(i) {
+    const items = petals.querySelectorAll(".petal");
+    if (!items.length) return;
+    const k = (i + items.length) % items.length;
+    items[k].focus();
+    setHot(k);
+  }
+
+  // Opens the ring centred near (x, y), nudged so the whole ring stays inside the demo
+  // and clear of the hint strip at the top.
+  function openRing(x, y) {
+    page = 0;
+    draw();
+    ring.removeAttribute("hidden");
+    const d = demo.getBoundingClientRect();
+    const half = parseFloat(getComputedStyle(ring).width) / 2; // unaffected by the entry animation
+    const fit = (v, lo, hi) => (lo > hi ? (lo + hi) / 2 : Math.min(Math.max(v, lo), hi));
+    ring.style.left = fit(x, half + 8, d.width - half - 8) + "px";
+    ring.style.top = fit(y, 56 + half, d.height - half - 8) + "px";
+    hint.classList.add("top");
+    hint.innerHTML = HINT_OPEN;
+  }
+
+  function closeRing() {
+    ring.setAttribute("hidden", "");
+    hint.classList.remove("top");
+    hint.innerHTML = HINT_IDLE;
+  }
+
+  function flip() {
+    if (!isOpen()) return;
+    page = 1 - page;
+    draw();
+  }
+
+  // Which petal is under a page point (same maths as the app's hit test).
+  function petalAt(x, y) {
+    const box = ring.getBoundingClientRect(), k = box.width / 384;
+    const dx = (x - box.left) / k - C, dy = (y - box.top) / k - C, r = Math.hypot(dx, dy);
+    if (r < HUB || r > R) return -1;
+    let a = Math.atan2(dx, -dy);
+    if (a < 0) a += 2 * Math.PI;
+    const n = PAGES[page].items.length, step = (2 * Math.PI) / n;
+    return Math.floor((a + step / 2) / step) % n;
+  }
+
+  function choose(i) {
+    const label = PAGES[page].items[i];
+    const [title, detail] = RESULT[label];
+    toast.innerHTML = `<strong>${title}</strong><span>${detail}</span>`;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (toast.hidden = true), 3200);
+    closeRing();
+  }
+
+  function resetFile() {
+    file.style.left = "";
+    file.style.top = "";
+  }
+
+  // Mouse/pen dragging of the photo.
+  file.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch") return; // touch uses taps (below)
+    dragging = true;
+    const b = file.getBoundingClientRect();
+    offset = [e.clientX - b.left, e.clientY - b.top];
+    // Capture keeps the drag going outside the photo; if a browser refuses it, carry on.
+    try { file.setPointerCapture(e.pointerId); } catch {}
+    file.classList.add("dragging");
+    if (e.shiftKey) {
+      const d = demo.getBoundingClientRect();
+      openRing(e.clientX - d.left, e.clientY - d.top);
+    }
+  });
+  file.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const d = demo.getBoundingClientRect();
+    file.style.left = e.clientX - d.left - offset[0] + "px";
+    file.style.top = e.clientY - d.top - offset[1] + "px";
+    if (isOpen()) setHot(petalAt(e.clientX, e.clientY));
+  });
+  file.addEventListener("pointerup", (e) => {
+    if (!dragging) return;
+    dragging = false;
+    file.classList.remove("dragging");
+    if (isOpen()) {
+      const i = petalAt(e.clientX, e.clientY);
+      if (i >= 0) choose(i);
+      else closeRing();
+    }
+    resetFile();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Shift" && !e.repeat) {
+      if (dragging && !isOpen()) {
+        const b = file.getBoundingClientRect(), d = demo.getBoundingClientRect();
+        openRing(b.left + b.width / 2 - d.left, b.top + b.height / 2 - d.top);
+      } else if (isOpen()) flip();
+    }
+    if (e.key === "Escape" && isOpen()) {
+      closeRing();
+      file.focus();
+    }
+  });
+
+  // Touch and keyboard: tap / Enter on the photo opens the ring around it.
+  file.addEventListener("click", (e) => {
+    if (dragging || (e.pointerType && e.pointerType !== "touch" && e.detail !== 0)) return;
+    const b = file.getBoundingClientRect(), d = demo.getBoundingClientRect();
+    openRing(b.left + b.width / 2 - d.left, b.top + b.height / 2 - d.top);
+    focusPetal(0);
+  });
+  ring.addEventListener("click", (e) => {
+    if (e.target === hub) return flip();
+    const g = e.target.closest(".petal");
+    if (g) choose(Number(g.dataset.i));
+  });
+  ring.addEventListener("keydown", (e) => {
+    const items = [...petals.querySelectorAll(".petal")];
+    const cur = items.indexOf(document.activeElement);
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") focusPetal(cur + 1);
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") focusPetal(cur - 1);
+    else if (e.key === "Enter" || e.key === " ") { if (cur >= 0) choose(cur); }
+    else if (e.key === "Tab") { e.preventDefault(); flip(); focusPetal(0); }
+    else return;
+    e.preventDefault();
+  });
+  petals.addEventListener("focusin", (e) => {
+    const g = e.target.closest(".petal");
+    if (g) setHot(Number(g.dataset.i));
+  });
+
+  hint.innerHTML = HINT_IDLE;
+})();
+</script>
+</body>
+</html>

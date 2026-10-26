@@ -2,20 +2,23 @@
    together, so generic selectors here would leak into the ring, card and editor. */
 
 html.settings-root {
-  --bg: #fafafa;
-  --fg: #1a1a1a;
-  --muted: #6b6b6b;
-  --line: #e2e2e2;
-  --accent: #e8742a;
+  --bg: #f4f8f1;
+  --fg: #13261b;
+  --muted: #557062;
+  --line: #dbe6d6;
+  --accent: #a6e43a;
+  --pond: #0e3b24;
+  --link: #2f6b3f;
   background: var(--bg);
 }
 
 @media (prefers-color-scheme: dark) {
   html.settings-root {
-    --bg: #1c1c1c;
-    --fg: #f0f0f0;
-    --muted: #a0a0a0;
-    --line: #333;
+    --bg: #0f1e15;
+    --fg: #e8f2e3;
+    --muted: #9cb5a5;
+    --line: #23402e;
+    --link: #a6e43a;
   }
 }
 
@@ -30,16 +33,22 @@ html.settings-root body {
   color: var(--fg);
 }
 
+.settings .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
 .settings h1 {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 22px;
+  font-weight: 700;
 }
 
 .settings h2 {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  font-size: 14px;
+  font-weight: 650;
   margin: 0 0 6px;
 }
 
@@ -86,12 +95,7 @@ html.settings-root body {
 
 .settings .status {
   min-height: 18px;
-  color: var(--accent);
-}
-
-.settings .last p {
-  margin: 0;
-  word-break: break-all;
+  color: var(--link);
 }
 
 .settings .about {
@@ -110,4 +114,13 @@ html.settings-root body {
 
 .settings .check:disabled {
   opacity: 0.6;
+}
+
+.settings .check:hover:not(:disabled) {
+  border-color: var(--link);
+}
+
+.settings :focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
 }

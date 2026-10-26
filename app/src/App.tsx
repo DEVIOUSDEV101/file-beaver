@@ -12,8 +12,6 @@ type Settings = {
   launch_at_startup: boolean;
 };
 
-type DropEvent = { action: string; paths: string[] };
-
 const TRIGGERS: { value: Settings["trigger"]; label: string }[] = [
   { value: "shift", label: "Shift" },
   { value: "ctrl_shift", label: "Ctrl + Shift" },
@@ -23,7 +21,6 @@ const TRIGGERS: { value: Settings["trigger"]; label: string }[] = [
 export default function App() {
   const [s, setS] = useState<Settings | null>(null);
   const [status, setStatus] = useState("");
-  const [lastDrop, setLastDrop] = useState<DropEvent | null>(null);
   const [version, setVersion] = useState("");
   const [updateMsg, setUpdateMsg] = useState("");
   const [checking, setChecking] = useState(false);
@@ -39,11 +36,9 @@ export default function App() {
         .catch(() => alive && tries > 0 && setTimeout(() => load(tries - 1), 200));
     load(50);
     getVersion().then(setVersion).catch(() => {});
-    const unDrop = listen<DropEvent>("drop", (e) => setLastDrop(e.payload));
     const unSet = listen<Settings>("settings-changed", (e) => setS(e.payload));
     return () => {
       alive = false;
-      unDrop.then((f) => f());
       unSet.then((f) => f());
     };
   }, []);
@@ -66,7 +61,10 @@ export default function App() {
 
   return (
     <main className="settings">
-      <h1>File Beaver</h1>
+      <header className="brand">
+        <img src="/beaver.svg" alt="" width="40" height="40" />
+        <h1>File Beaver</h1>
+      </header>
       <p className="hint">
         Drag any file and tap <kbd>{keyName}</kbd> to open the ring. Tap again to switch between Convert and Tools.
       </p>
@@ -142,17 +140,6 @@ export default function App() {
           </button>
         </div>
         {updateMsg && <p className="hint">{updateMsg}</p>}
-      </section>
-
-      <section className="last">
-        <h2>Last drop</h2>
-        {lastDrop ? (
-          <p>
-            <b>{lastDrop.action}</b> · {lastDrop.paths.join(", ")}
-          </p>
-        ) : (
-          <p className="hint">Nothing yet.</p>
-        )}
       </section>
     </main>
   );

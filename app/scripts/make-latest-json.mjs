@@ -16,7 +16,9 @@ const dir = join(app, "src-tauri", "target", "release", "bundle", "nsis");
 const installer = readdirSync(dir).find((f) => f.endsWith("-setup.exe") && f.includes(conf.version));
 if (!installer) throw new Error(`no ${conf.version} installer in ${dir}; run npx tauri build first`);
 const signature = readFileSync(join(dir, `${installer}.sig`), "utf8").trim();
-const url = `${base.replace(/\/$/, "")}/${encodeURIComponent(installer)}`;
+// GitHub stores release assets with spaces turned into dots ("File Beaver_..." -> "File.Beaver_...").
+const assetName = installer.replace(/ /g, ".");
+const url = `${base.replace(/\/$/, "")}/${encodeURIComponent(assetName)}`;
 
 const feed = {
   version: conf.version,
